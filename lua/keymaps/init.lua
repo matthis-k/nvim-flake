@@ -19,8 +19,8 @@ map("v", "/", function ()
     vim.api.nvim_feedkeys(vim.keycode("N"), "n", false)
 end, { noremap = true, silent = true })
 
-map("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true })
-map("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true })
+map("n", "j", "gj")
+map("n", "k", "gk")
 
 map("n", "<c-left>", "<cmd>vertical resize -2<cr>")
 map("n", "<c-down>", "<cmd>resize -2<cr>")

@@ -8,26 +8,11 @@ care.setup({
             border = "rounded",
             position = "auto",
             format_entry = function (entry, data)
-                local completion_item = entry.completion_item
-                local type_icons = require("care.config").options.ui.type_icons or {}
-                -- TODO: remove since now can only be number, or also allow custom string kinds?
-                local entry_kind = type(completion_item.kind) == "string" and completion_item.kind
-                    or require("care.utils.lsp").get_kind_name(completion_item.kind)
-
+                local preset_cmps=require("care.presets.components")
                 return {
-                    {
-                        {
-                            " " .. require("care.presets.utils").LabelEntries(labels)(entry, data) .. " ",
-                            "Comment",
-                        },
-                    },
-                    { { completion_item.label .. " ", data.deprecated and "Comment" or "@care.entry" } },
-                    {
-                        {
-                            " " .. (type_icons[entry_kind] or type_icons.Text) .. " ",
-                            ("@care.type.%s"):format(entry_kind),
-                        },
-                    },
+                    preset_cmps.KindIcon(entry, "fg"),
+                    preset_cmps.Label(entry, data, false),
+                    preset_cmps.KindName(entry, true)
                 }
             end,
             scrollbar = "█",

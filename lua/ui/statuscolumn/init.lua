@@ -3,17 +3,22 @@ if not nixCats("ui.statuscolumn") then
 end
 local utf8sub = require("utils").utf8sub
 local builder = require("ui.linebuilder")
-local group = builder.group
-local component = builder.component
+local part = builder.part
+
+local M = {}
+
+function _G.click_handlers.goto_line(minwid, num_clicks, btn, mods)
+    local mouse = vim.fn.getmousepos()
+    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
+end
 
 ---Implemetns the number colomn with _some_ support for vims options
 ---@param win integer The window id of the column drawn
 ---@param line integer What line we are at
----@return nixovim.ui.line.Component
+---@return nixovim.ui.line.Part
 local function number_column(win, line)
-    if line < 1
-        or ((not vim.wo[win].relativenumber) and (not vim.wo[win].number)) then
-        return component()
+    if line < 1 or ((not vim.wo[win].relativenumber) and (not vim.wo[win].number)) then
+        return part()
     end
     local width = math.max(vim.wo[win].numberwidth, #tostring(vim.fn.line("w$", win)) + 1)
     local is_focused = win == vim.api.nvim_get_current_win()
@@ -26,7 +31,7 @@ local function number_column(win, line)
         num_str = string.format("%" .. tostring(width) .. "d", is_focused and vim.v.relnum or line)
         hl = "StcLineNumber"
     end
-    return component(num_str, hl)
+    return part(num_str, false, hl, "v:lua.click_handlers.goto_line")
 end
 
 ---Shows sign with highest priority matching the filter
@@ -34,7 +39,7 @@ end
 ---@param line integer What line we are at
 ---@param filter? any
 ---@param opts? any
----@return nixovim.ui.line.Component
+---@return nixovim.ui.line.Part
 local function signs(win, line, filter, opts)
     local width = opts and opts.width or 2
     filter = filter or {}
@@ -69,7 +74,7 @@ local function signs(win, line, filter, opts)
     if extmark and extmark.sign_text then
         text = utf8sub(extmark.sign_text, 1, width)
     end
-    return component(text, extmark.sign_hl_group)
+    return part(text, false, extmark.sign_hl_group)
 end
 
 ---Defines my status column
@@ -77,11 +82,11 @@ end
 function StatusColumn()
     local win = vim.g.statusline_winid
     local line = vim.v.lnum
-    local stc = group("StcLineNumber", {
+    local stc = part({
         signs(win, line, { namespace = "vim%.lsp%..+%..+%/diagnostic%/signs" }, { width = 2 }),
         number_column(win, line),
         signs(win, line, { namespace = "gitsigns_signs_.*" }, { width = 1 }),
-    }, false, false, false)
+    }, false, "StcLineNumber")
 
     if vim.wo[vim.g.statusline_winid].statuscolumn then
         return builder.part_to_str(stc)
@@ -102,3 +107,5 @@ if not loaded then
     vim.o.statuscolumn = "%!v:lua.StatusColumn()"
     vim.o.numberwidth = 1
 end
+
+return M

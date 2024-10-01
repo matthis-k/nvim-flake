@@ -42,6 +42,10 @@ function M.compose_hl(args)
     local opts = vim.deepcopy(args) or {}
     ---@type vim.api.keyset.highlight
     local res = {}
+    if opts.link then
+        res = vim.api.nvim_get_hl(0, { name = opts.link, link = false }) or {}
+        opts.link = nil
+    end
     if opts.fg and type(opts.fg) == "string" then
         local hexcode = opts.fg:match("#%x%x%x%x?%x?%x?%x?%x?")
         if hexcode then
@@ -60,9 +64,20 @@ function M.compose_hl(args)
             res.bg = base.bg
         end
     end
-    if (not opts.fg) and not opts.bg and opts.link then
-        res = vim.api.nvim_get_hl(0, { name = opts.link, link = false }) or {}
-        opts.link = nil
+    if opts.sp and type(opts.sp) == "string" then
+        local hexcode = opts.sp:match("#%x%x%x%x?%x?%x?%x?%x?")
+        if hexcode then
+            res.sp = hexcode
+        else
+            local base = vim.api.nvim_get_hl(0, { name = opts.sp, link = false }) or {}
+            res.sp = base.sp
+        end
+    end
+    if opts.reverse then
+        local tmp = opts.fg
+        opts.fg = opts.bg
+        opts.bg = tmp
+        opts.reverse = nil
     end
     ---@type  vim.api.keyset.highlight
     return vim.tbl_deep_extend("keep", res, opts)

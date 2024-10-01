@@ -126,14 +126,13 @@
 ---@field extraArgs? table Additional arguments to rustfmt. Defaults to [].
 ---@field overrideCommand? table|nil Fully override the command rust-analyzer uses for formatting.
 
-return nixCats("lsp.rust")
-    and {
-        settings = {
-            ---@type RustAnalyzerOptions
-            ["rust-analyzer"] = {
-                diagnostics = {
-                    enable = true,
-                },
+return nixCats("lsp.rust") and {
+    settings = {
+        ---@type RustAnalyzerOptions
+        ["rust-analyzer"] = {
+            diagnostics = {
+                enable = true,
             },
         },
-    }
+    },
+}
