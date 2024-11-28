@@ -31,15 +31,15 @@ function StatusLine()
     return builder.part_to_str(line)
 end
 
-vim.api.nvim_set_hl(0, "StlSectionA", hl({ link = "@method", reverse = true }))
-vim.api.nvim_set_hl(0, "StlSectionB", hl({ link = "Visual" }))
+vim.api.nvim_set_hl(0, "StlSectionA", hl({ fg = "@method", bg = "Normal", reverse = true }))
+vim.api.nvim_set_hl(0, "StlSectionB", hl({ bg = "Visual" }))
 vim.api.nvim_set_hl(0, "StlSectionC", hl({ link = "Normal" }))
 
-vim.api.nvim_set_hl(0, "StlModeNormal", hl({ link = "@method", reverse = true, bold = true }))
-vim.api.nvim_set_hl(0, "StlModeVisual", hl({ link = "@keyword", reverse = true, bold = true }))
-vim.api.nvim_set_hl(0, "StlModeInsert", hl({ link = "@string", reverse = true, bold = true }))
-vim.api.nvim_set_hl(0, "StlModeReplace", hl({ link = "@character", reverse = true, bold = true }))
-vim.api.nvim_set_hl(0, "StlModeCommand", hl({ link = "@constant", reverse = true, bold = true }))
+vim.api.nvim_set_hl(0, "StlModeNormal", hl({ fg = "@method", bg = "Normal", reverse = true, bold = true }))
+vim.api.nvim_set_hl(0, "StlModeVisual", hl({ fg = "@keyword", bg = "Normal", reverse = true, bold = true }))
+vim.api.nvim_set_hl(0, "StlModeInsert", hl({ fg = "@string", bg = "Normal", reverse = true, bold = true }))
+vim.api.nvim_set_hl(0, "StlModeReplace", hl({ fg = "@character", bg = "Normal", reverse = true, bold = true }))
+vim.api.nvim_set_hl(0, "StlModeCommand", hl({ fg = "@constant", bg = "Normal", reverse = true, bold = true }))
 vim.api.nvim_set_hl(0, "StlModeTerminalInsert", hl({ link = "StlModeInsert", reverse = true, bold = true }))
 vim.api.nvim_set_hl(0, "StlModeTerminalNormal", hl({ link = "StlModeNormal", reverse = true, bold = true }))
 

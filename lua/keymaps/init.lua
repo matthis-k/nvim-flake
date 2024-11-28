@@ -37,6 +37,12 @@ map("i", "<a-K>", "<esc><cmd>m .-2<cr>==gi", { desc = "Move up" })
 map({ "n", "x", "o" }, "n", "'Nn'[v:searchforward]", { expr = true, desc = "Next search result" })
 map({ "n", "x", "o" }, "N", "'nN'[v:searchforward]", { expr = true, desc = "Prev search result" })
 
+map("n", "H", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
+map("n", "L", "<cmd>bnext<cr>", { desc = "Next buffer" })
+
+map("n", "gB", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
+map("n", "gb", "<cmd>bnext<cr>", { desc = "Next buffer" })
+
 map("i", ",", ",<c-g>u")
 map("i", ".", ".<c-g>u")
 map("i", ";", ";<c-g>u")

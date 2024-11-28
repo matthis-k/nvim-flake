@@ -24,6 +24,7 @@ function M.part_to_str(part)
     if not part then return res end
 
     local hl_string = (part.hl and string.format("%%#%s#", part.hl) or "")
+
     res = res .. hl_string
 
     res = res .. M.part_to_str(part.before)
@@ -34,7 +35,7 @@ function M.part_to_str(part)
     for _, sub_part in ipairs(part) do
         local sub_res = M.part_to_str(sub_part)
         if sub_part.hl then
-            res = res .. hl_string
+            sub_res = sub_res .. hl_string
         end
         if #sub_res > 0 then
             table.insert(sub_parts, sub_res)

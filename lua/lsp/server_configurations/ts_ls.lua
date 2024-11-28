@@ -11,6 +11,7 @@ return nixCats("lsp.ts") and {
     filetypes = {
         "javascript",
         "typescript",
+        "typescriptreact",
         "vue",
     },
 }

@@ -8,7 +8,8 @@ local hl = utils.compose_hl
 local builder = require("ui.linebuilder")
 local part = builder.part
 
-function _G.click_handlers.goto_buffer(buf)
+function _G.click_handlers.click_buffer(minwid, num_clicks, btn, mods)
+    local buf = minwid
     local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
         return vim.api.nvim_win_get_buf(win) == buf
     end)
@@ -19,7 +20,40 @@ function _G.click_handlers.goto_buffer(buf)
     end
 end
 
-function _G.click_handlers.close_buffer(buf)
+function _G.click_handlers.click_close_buffer(minwid, num_clicks, btn, mods)
+    local buf = minwid
+    vim.api.nvim_buf_delete(buf, {})
+    vim.cmd("redrawtabline")
+end
+
+function _G.click_handlers.click_tab(minwid, num_clicks, btn, mods)
+    local tabpage = tonumber(minwid)
+    if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
+        vim.api.nvim_set_current_tabpage(tabpage)
+    end
+end
+
+function _G.click_handlers.click_close_tab(minwid, num_clicks, btn, mods)
+    local tabpage = tonumber(minwid)
+    if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
+        local tabpage_num = vim.api.nvim_tabpage_get_number(tabpage)
+        vim.cmd("tabclose " .. tabpage_num)
+    end
+    vim.cmd("redrawtabline")
+end
+
+function _G.click_handlers.click_buffer(buf)
+    local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
+        return vim.api.nvim_win_get_buf(win) == buf
+    end)
+    if win then
+        vim.api.nvim_set_current_win(win)
+    else
+        vim.api.nvim_set_current_buf(buf)
+    end
+end
+
+function _G.click_handlers.click_close_buffer(buf)
     vim.api.nvim_buf_delete(buf, {})
     vim.cmd("redrawtabline")
 end
@@ -48,10 +82,10 @@ function M.buffer(buf)
     end
 
     local signs = {
-        error = get_sign("DiagnosticSignError", "E", "TblDiagnosticError"),
-        warn = get_sign("DiagnosticSignWarn", "W", "TblDiagnosticWarn"),
-        info = get_sign("DiagnosticSignInfo", "I", "TblDiagnosticInfo"),
-        hint = get_sign("DiagnosticSignHint", "H", "TblDiagnosticHint"),
+        error = get_sign("DiagnosticSignError", "E", "Tbl" .. cur_str .. "DiagnosticError"),
+        warn = get_sign("DiagnosticSignWarn", "W", "Tbl" .. cur_str .. "DiagnosticWarn"),
+        info = get_sign("DiagnosticSignInfo", "I", "Tbl" .. cur_str .. "DiagnosticInfo"),
+        hint = get_sign("DiagnosticSignHint", "H", "Tbl" .. cur_str .. "DiagnosticHint"),
     }
 
     local diagnostics = {}
@@ -75,11 +109,11 @@ function M.buffer(buf)
 
 
     local label = part(filename, { after = true }, string.format("Tbl%sFilename%s", cur_str, diagnostic_str),
-        "v:lua.click_handlers.goto_buffer",
+        "v:lua.click_handlers.click_buffer",
         tostring(buf))
     local close_button = part("󰖭", { before = true, after = true }, string.format("Tbl%sCloseButton", cur_str),
-        "v:lua.click_handlers.close_buffer", tostring(buf))
-    return part({ label, part(diagnostics, false), close_button }, { before = true },
+        "v:lua.click_handlers.click_close_buffer", tostring(buf))
+    return part({ label, part(diagnostics, { separator = true }), close_button }, { before = true },
         string.format("Tbl%sBuffer", cur_str))
 end
 
@@ -92,34 +126,60 @@ function M.buffers()
         end)
     end):totable()
     buffers = vim.api.nvim_list_bufs()
-    local parts = {
-        part("Buffers", nil, "TblBufferLabel"),
-    }
+    local parts = {}
     for _, buf in ipairs(buffers) do
         if vim.fn.buflisted(buf) ~= 0 then
             table.insert(parts, M.buffer(buf))
         end
     end
-    return part(parts, false, "CursorLine")
+    return part({ part("Buffers", nil, "TblBufferLabel"), part(parts, { separator = true }, "TblSectionC") }, false,
+        "TblSectionC")
+end
+
+function M.tab(tabpage)
+    local cur_str = (vim.fn.tabpagenr() == tabpage) and "Current" or ""
+
+    local label = part(tostring(tabpage), false, string.format("Tbl%stab", cur_str),
+        "v:lua.click_handlers.click_tab",
+        tostring(tabpage))
+    local close_button = part("󰖭", { before = true, after = true }, string.format("Tbl%sTabCloseButton", cur_str),
+        "v:lua.click_handlers.click_close_tab", tostring(tabpage))
+    return part({ label, part(diagnostics, false), close_button }, { before = true },
+        string.format("Tbl%sTab", cur_str))
+end
+
+function M.tabs()
+    local tabpages = vim.api.nvim_list_tabpages()
+    local parts = {}
+    for _, tabpage in ipairs(tabpages) do
+        table.insert(parts, M.tab(tabpage))
+    end
+    return part({ part(parts, { separator = true }, "TblSectionC"), part("Tabs", nil, "TblTabLabel") }, false,
+        "TblSectionC")
 end
 
 ---Creates tab line format string
 ---@return string
 function TabLine()
-    local line = part({ 
+    local line = part({
         M.buffers(),
         part("%=", nil, "StlSectionC"),
-    }, { before = false })
+        M.tabs(),
+    }, false, "TblSectionC")
     return builder.part_to_str(line)
 end
 
-vim.api.nvim_set_hl(0, "TblBufferLabel", hl({ fg = "@method", bold = true, reverse = true }))
+vim.api.nvim_set_hl(0, "TblSectionA", hl({ link = "StlSectionA" }))
+vim.api.nvim_set_hl(0, "TblSectionB", hl({ link = "StlSectionB" }))
+vim.api.nvim_set_hl(0, "TblSectionC", hl({ link = "StlSectionC" }))
 
-vim.api.nvim_set_hl(0, "TblBuffer", hl({ bg = "Visual" }))
+vim.api.nvim_set_hl(0, "TblBufferLabel", hl({ link = "TblSectionA", bold = true }))
+
+vim.api.nvim_set_hl(0, "TblBuffer", hl({ link = "TblSectionB", bg = "StlSectionC" }))
 vim.api.nvim_set_hl(0, "TblCloseButton", hl({ fg = "Error", bg = "TblBuffer" }))
 vim.api.nvim_set_hl(0, "TblFilename", hl({ link = "TblBuffer", fg = "Normal" }))
 
-vim.api.nvim_set_hl(0, "TblCurrentBuffer", hl({ fg = "@method", bg = "TblBuffer" }))
+vim.api.nvim_set_hl(0, "TblCurrentBuffer", hl({ link = "TblBuffer", bg = "Visual" }))
 vim.api.nvim_set_hl(0, "TblCurrentFilename", hl({ fg = "@method", bg = "TblCurrentBuffer", bold = true }))
 vim.api.nvim_set_hl(0, "TblCurrentCloseButton", hl({ bg = "TblCurrentBuffer", fg = "Error" }))
 
@@ -133,13 +193,21 @@ vim.api.nvim_set_hl(0, "TblCurrentDiagnosticWarn", hl({ fg = "DiagnosticWarn", b
 vim.api.nvim_set_hl(0, "TblCurrentDiagnosticInfo", hl({ fg = "DiagnosticInfo", bg = "TblCurrentBuffer" }))
 vim.api.nvim_set_hl(0, "TblCurrentDiagnosticHint", hl({ fg = "DiagnosticHint", bg = "TblCurrentBuffer" }))
 
+vim.api.nvim_set_hl(0, "TblTabLabel", hl({ link = "TblSectionA", bold = true }))
+
+vim.api.nvim_set_hl(0, "TblTab", hl({ link = "TblSectionB", bg = "TblSectionC" }))
+vim.api.nvim_set_hl(0, "TblTabCloseButton", hl({ fg = "Error", bg = "TblTab" }))
+
+vim.api.nvim_set_hl(0, "TblCurrentTab", hl({ fg = "@method", bg = "TblSectionB", bold = true }))
+vim.api.nvim_set_hl(0, "TblCurrentTabCloseButton", hl({ link = "TblTabCloseButton", bg = "TblCurrentTab" }))
+
 
 
 vim.o.tabline = "%!v:lua.TabLine()"
 vim.o.showtabline = 2
 
 vim.api.nvim_create_augroup("TablineRedraw", { clear = true })
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
+vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "TabNew", "TabClosed", "DiagnosticChanged" }, {
     group = "TablineRedraw",
     pattern = "*",
     callback = function ()
