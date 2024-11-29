@@ -1,8 +1,0 @@
-{
-    "workspace.library": [
-        "/home/matthisk/.config/nixovim",
-        "${3rd}/luv/library",
-        "${3rd}/busted/library",
-        "${3rd}/luassert/library"
-    ]
-}

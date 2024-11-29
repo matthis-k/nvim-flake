@@ -8,11 +8,11 @@ care.setup({
             border = "rounded",
             position = "auto",
             format_entry = function (entry, data)
-                local preset_cmps=require("care.presets.components")
+                local preset_cmps = require("care.presets.components")
                 return {
                     preset_cmps.KindIcon(entry, "fg"),
                     preset_cmps.Label(entry, data, false),
-                    preset_cmps.KindName(entry, true)
+                    preset_cmps.KindName(entry, true),
                 }
             end,
             scrollbar = "█",
@@ -63,7 +63,13 @@ care.setup({
     selection_behavior = "select",
     confirm_behavior = "insert",
     keyword_pattern = [[\%(-\?\d\+\%(\.\d\+\)\?\|\h\w*\%(-\w*\)*\)]],
-    sources = {},
+    sources = {
+        cmp_lazydev = {
+            enabled = function ()
+                return vim.api.nvim_buf_get_option(0, "filetype") == "lua"
+            end,
+        },
+    },
     preselect = false,
     sorting_direction = "top-down",
     completion_events = { "TextChangedI" },

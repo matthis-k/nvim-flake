@@ -123,12 +123,6 @@
 ---@field userThirdParty? string[] # An array of paths to custom addons. Default is `[]`.
 
 return nixCats("lsp.lua") and {
-    on_init = function (client)
-        local path = client.workspace_folders[1].name
-        if vim.loop.fs_stat(path .. "/.luarc.json") or vim.loop.fs_stat(path .. "/.luarc.jsonc") then
-            return
-        end
-    end,
     settings = {
         --- @type LuaLsOptions
         Lua = {
@@ -206,7 +200,7 @@ return nixCats("lsp.lua") and {
                 globals = { "vim", "nixCats" },
             },
             workspace = {
-                checkThirdParty = "Apply",
+                checkThirdParty = "false",
                 library = {
                     unpack(vim.api.nvim_get_runtime_file("", true)),
                     "${3rd}/luv/library",
