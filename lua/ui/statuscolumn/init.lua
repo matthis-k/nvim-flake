@@ -95,16 +95,17 @@ local function init_cache(win)
     cache.folds.end_line = end_line
     cache.folds.hide = vim.api.nvim_win_get_option(win, "foldcolumn") == "0"
     cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
+    cache.is_focused_window = vim.api.nvim_get_current_win() == win
 end
 
 local function fold_column(win, line)
     if cache.folds.hide then
         return part("", false)
-    end
-
-    if cache.folds.on_closed_fold and line == cache.folds.start_line then
+    elseif not cache.is_focused_window then
+        return part(" ", false)
+    elseif cache.folds.on_closed_fold and line == cache.folds.start_line then
         return part("🭽", false)
-    elseif cache.folds.on_closed_fold and line == cache.folds.end_line+1 then
+    elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
         return part("▔", false)
     elseif line == cache.folds.start_line then
         return part("🭽", false)
