@@ -77,6 +77,44 @@ local function init_cache(win)
         cache.ns_empty[ns_id] = is_ns_emtpy
     end
     cache.ns_ids = ns_ids
+
+    cache.folds = {}
+
+    local cursor_line = vim.fn.line(".")
+    local fold_level = vim.fn.foldlevel(cursor_line)
+
+    local start_line = cursor_line
+    while start_line >= vim.fn.line("w0", win) and vim.fn.foldlevel(start_line - 1) >= fold_level do
+        start_line = start_line - 1
+    end
+    local end_line = cursor_line
+    while end_line < vim.fn.line("w$", win) and vim.fn.foldlevel(end_line + 1) >= fold_level do
+        end_line = end_line + 1
+    end
+    cache.folds.start_line = start_line
+    cache.folds.end_line = end_line
+    cache.folds.hide = vim.api.nvim_win_get_option(win, "foldcolumn") == "0"
+    cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
+end
+
+local function fold_column(win, line)
+    if cache.folds.hide then
+        return part("", false)
+    end
+
+    if cache.folds.on_closed_fold and line == cache.folds.start_line then
+        return part("🭽", false)
+    elseif cache.folds.on_closed_fold and line == cache.folds.end_line+1 then
+        return part("▔", false)
+    elseif line == cache.folds.start_line then
+        return part("🭽", false)
+    elseif cache.folds.start_line < line and line < cache.folds.end_line then
+        return part("▏", false)
+    elseif line == cache.folds.end_line then
+        return part("🭼", false)
+    else
+        return part(" ", false)
+    end
 end
 
 ---Shows sign with highest priority matching the filter
@@ -145,6 +183,7 @@ function StatusColumn()
                     or name:match("gitsigns_signs.*"))
             end, { width = 2, hide_empty = true }),
         signs(win, line, function (name) return name:match("vim%.lsp%..+%..+%/diagnostic%/signs") end, { width = 2 }),
+        fold_column(win, line),
         number_column(win, line),
         signs(win, line, function (name) return name:match("gitsigns_signs_.*") end, { width = 1 }),
     }, false, "StcLineNumber")
