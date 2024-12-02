@@ -14,8 +14,16 @@ local function get_ahead_behind(git_info)
             if data then
                 local output = table.concat(data, "\n")
                 local ahead, behind = output:match("(%d+)%s+(%d+)")
-                res.ahead = tonumber(ahead)
-                res.behind = tonumber(behind)
+                res.ahead = tonumber(ahead) or 0
+                res.behind = tonumber(behind) or 0
+            end
+        end,
+        on_stderr = function (_, err)
+            res.error = "No remote"
+        end,
+        on_exit = function (_, exit_code)
+            if exit_code ~= 0 then
+                res.error = "No remote"
             end
         end,
     })
@@ -108,6 +116,7 @@ function M.remote()
     if not M.cache[git_status.root] then M.update_remotes() end
     local remote = M.cache[git_status.root]
     local parts = {}
+    if remote.error then return part("", false) end
     if remote.ahead > 0 then
         table.insert(parts, part(string.format("↑%d", remote.ahead), false, "StlGitRemoteAhead"))
     end
