@@ -45,14 +45,21 @@ local function init_cache(win)
     for line = first_line, last_line do
         cache.lines[line] = {}
         for _, ns_id in pairs(ns_ids) do
-            cache.lines[line][ns_id] = vim.api.nvim_buf_get_extmarks(
-                buf, ns_id,
-                { line - 1, 0 },
-                { line - 1, -1 },
-                { type = "sign", details = true }
-            )
+            cache.lines[line][ns_id] = {}
         end
     end
+
+    for _, ns_id in pairs(ns_ids) do
+        for _, sign in ipairs(vim.api.nvim_buf_get_extmarks(
+            buf, ns_id,
+            { first_line - 1, 0 },
+            { last_line - 1, -1 },
+            { type = "sign", details = true }
+        )) do
+            table.insert(cache.lines[sign[2] + 1][ns_id], sign)
+        end
+    end
+
     local empty_ns_lines = {}
     for line = first_line, last_line do
         for _, ns_id in pairs(ns_ids) do
@@ -116,6 +123,9 @@ end
 ---@return string
 function StatusColumn()
     local win = vim.g.statusline_winid
+    if not vim.wo[win].statuscolumn then
+        return ""
+    end
     local line = vim.v.lnum
     local first_line = vim.fn.line("w0", win)
     local last_line = vim.fn.line("w$", win)
@@ -139,11 +149,9 @@ function StatusColumn()
         signs(win, line, function (name) return name:match("gitsigns_signs_.*") end, { width = 1 }),
     }, false, "StcLineNumber")
 
-    if vim.wo[vim.g.statusline_winid].statuscolumn then
-        return builder.part_to_str(stc)
-    else
-        return ""
-    end
+    local res = builder.part_to_str(stc)
+
+    return res
 end
 
 local hl = require("utils").compose_hl
