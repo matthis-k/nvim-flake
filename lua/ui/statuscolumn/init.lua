@@ -93,28 +93,30 @@ local function init_cache(win)
     end
     cache.folds.start_line = start_line
     cache.folds.end_line = end_line
-    cache.folds.hide = vim.api.nvim_win_get_option(win, "foldcolumn") == "0"
+    cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
+    cache.folds.fold_level = vim.fn.foldlevel(".")
     cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
     cache.is_focused_window = vim.api.nvim_get_current_win() == win
 end
 
 local function fold_column(win, line)
+    if not cache then return end
     if cache.folds.hide then
         return part("", false)
-    elseif not cache.is_focused_window then
-        return part(" ", false)
+    elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
+        return part(" ", false, "StcFold")
     elseif cache.folds.on_closed_fold and line == cache.folds.start_line then
-        return part("🭽", false)
+        return part("🭽", false, "StcFolded")
     elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
-        return part("▔", false)
+        return part("▔", false, "StcFolded")
     elseif line == cache.folds.start_line then
-        return part("🭽", false)
+        return part("🭽", false, "StcFold")
     elseif cache.folds.start_line < line and line < cache.folds.end_line then
-        return part("▏", false)
+        return part("▏", false, "StcFold")
     elseif line == cache.folds.end_line then
-        return part("🭼", false)
+        return part("🭼", false, "StcFold")
     else
-        return part(" ", false)
+        return part(" ", false, "StcFold")
     end
 end
 
@@ -187,7 +189,7 @@ function StatusColumn()
         fold_column(win, line),
         number_column(win, line),
         signs(win, line, function (name) return name:match("gitsigns_signs_.*") end, { width = 1 }),
-    }, false, "StcLineNumber")
+    }, false, line == vim.fn.line(".") and "StcCurrentLineNumber" or "StcLineNumber")
 
     local res = builder.part_to_str(stc)
 
@@ -200,6 +202,8 @@ vim.api.nvim_set_hl(0, "StcSignColumn", hl({ link = "SignColumn" }))
 vim.api.nvim_set_hl(0, "StcFoldColumn", hl({ link = "FoldColumn" }))
 vim.api.nvim_set_hl(0, "StcLineNumber", hl({ link = "LineNr" }))
 vim.api.nvim_set_hl(0, "StcCurrentLineNumber", hl({ link = "CursorLine", bold = true }))
+vim.api.nvim_set_hl(0, "StcFold", hl({ fg = "FoldColumn" }))
+vim.api.nvim_set_hl(0, "StcFolded", hl({ fg = "Folded" }))
 
 vim.o.statuscolumn = "%!v:lua.StatusColumn()"
 vim.o.numberwidth = 4
