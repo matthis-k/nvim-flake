@@ -19,7 +19,7 @@ function StatusLine()
             git.all(),
             stl.filename(),
             stl.diagnostics(),
-        }, nil, "StlSectionB"),
+        }, { separator = true }, "StlSectionB"),
         part({}, nil, "StlSectionC"),
         part("%=", nil, "StlSectionC"),
         part({
