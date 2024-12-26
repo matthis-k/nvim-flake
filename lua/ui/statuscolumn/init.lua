@@ -7,33 +7,6 @@ local part = builder.part
 
 local M = {}
 
-function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
-    local mouse = vim.fn.getmousepos()
-    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
-end
-
----Implemetns the number colomn with _some_ support for vims options
----@param win integer The window id of the column drawn
----@param line integer What line we are at
----@return nixovim.ui.line.Part
-local function number_column(win, line)
-    if line < 1 or ((not vim.wo[win].relativenumber) and (not vim.wo[win].number)) then
-        return part()
-    end
-    local width = math.max(vim.wo[win].numberwidth, #tostring(vim.fn.line("w$", win)) + 1)
-    local is_focused = win == vim.api.nvim_get_current_win()
-    local num_str
-    local hl
-    if vim.v.relnum == 0 and vim.wo.relativenumber and is_focused then
-        num_str = string.format("%-" .. tostring(width) .. "d", line)
-        hl = "StcCurrentLineNumber"
-    else
-        num_str = string.format("%" .. tostring(width) .. "d", is_focused and vim.v.relnum or line)
-        hl = "StcLineNumber"
-    end
-    return part(num_str, false, hl, "v:lua.click_handlers.click_line")
-end
-
 local cache = {}
 local function init_cache(win)
     cache = {}
@@ -97,6 +70,33 @@ local function init_cache(win)
     cache.folds.fold_level = vim.fn.foldlevel(".")
     cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
     cache.is_focused_window = vim.api.nvim_get_current_win() == win
+    cache.drawn_fold_starts = {}
+    cache.drawn_fold_end_skips = {}
+    for i = first_line, last_line do
+        cache.drawn_fold_end_skips[i] = vim.fn.screenpos(win, line, vim.fn.col({ line, "$" })).row -
+            vim.fn.screenpos(win, line, 0).row
+    end
+end
+
+
+function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
+    local mouse = vim.fn.getmousepos()
+    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
+end
+
+---Implemetns the number colomn with _some_ support for vims options
+---@param win integer The window id of the column drawn
+---@param line integer What line we are at
+---@return nixovim.ui.line.Part
+local function number_column(win, line)
+    local hl
+    local is_focused = win == vim.api.nvim_get_current_win()
+    if vim.v.relnum == 0 and vim.wo.relativenumber and is_focused then
+        hl = "StcCurrentLineNumber"
+    else
+        hl = "StcLineNumber"
+    end
+    return part("%l", false, hl, "v:lua.click_handlers.click_line")
 end
 
 local function fold_column(win, line)
@@ -110,11 +110,15 @@ local function fold_column(win, line)
     elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
         return part("▔", false, "StcFolded")
     elseif line == cache.folds.start_line then
-        return part("🭽", false, "StcFold")
+        local has_drawn_start = cache.drawn_fold_starts[line]
+        cache.drawn_fold_starts[line] = true
+        return part(has_drawn_start and "▏" or "🭽", false, "StcFold")
     elseif cache.folds.start_line < line and line < cache.folds.end_line then
         return part("▏", false, "StcFold")
     elseif line == cache.folds.end_line then
-        return part("🭼", false, "StcFold")
+        local is_last = cache.drawn_fold_end_skips[line] <= 0
+        cache.drawn_fold_end_skips[line] = cache.drawn_fold_end_skips[line] - 1
+        return part(is_last and "🭼" or "▏", false, "StcFold")
     else
         return part(" ", false, "StcFold")
     end
