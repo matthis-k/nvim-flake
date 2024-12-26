@@ -116,9 +116,9 @@ local capability_keymap_table = {
         { "n", "<space>lwl", list_workspace_folders,              { silent = true, desc = "List folders" } },
     },
     always = {
-        { "n", "gl",        vim.diagnostic.open_float, { silent = true, desc = "Open diagnostics" } },
-        { "n", "<space>lk", vim.diagnostic.goto_prev,  { silent = true, desc = "Go to prev diagnostic" } },
-        { "n", "<space>lj", vim.diagnostic.goto_next,  { silent = true, desc = "Go to next diagnostic" } },
+        { "n", "gl",        vim.diagnostic.open_float,                           { silent = true, desc = "Open diagnostics" } },
+        { "n", "<space>lk", function () vim.diagnostic.jump({ count = -1 }) end, { silent = true, desc = "Go to prev diagnostic" } },
+        { "n", "<space>lj", function () vim.diagnostic.jump({ count = 1 }) end,  { silent = true, desc = "Go to next diagnostic" } },
     },
 }
 
@@ -131,7 +131,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             return
         end
         for method, keymaps in pairs(capability_keymap_table) do
-            if method == "always" or client.supports_method(method) then
+            if method == "always" or client:supports_method(method) then
                 for _, keymap in ipairs(keymaps) do
                     local modes, lhs, rhs, opts = keymap[1], keymap[2], keymap[3], keymap[4]
                     opts = opts or {}
