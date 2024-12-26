@@ -64,8 +64,23 @@ end
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("highlight_yank", { clear = true }),
+    desc = "Highlights yanked text",
     callback = function ()
         vim.highlight.on_yank({ higroup = "Visual" })
+    end,
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("LspFolds", { clear = true }),
+    desc = "Enables LSP driven folds if supported",
+    callback = function (ev)
+        local client = vim.lsp.get_client_by_id(ev.data.client_id)
+        if not client then
+            return
+        end
+        if client:supports_method("textDocument/foldingRange") then
+            vim.api.nvim_set_option_value("foldexpr", "v:lua.vim.lsp.foldexpr()", {})
+        end
     end,
 })
 
