@@ -84,22 +84,15 @@
     } @ packageDef: {
       propagatedBuildInputs = {};
       lspsAndRuntimeDeps = {
-        lsp.rust = with pkgs; [
-          rust-analyzer
-          (rust-bin.stable.latest.default.override {extensions = ["rust-src"];})
-        ];
-        lsp.lua = with pkgs; [
-          lua-language-server
-          stylua
-        ];
-        lsp.nix = with pkgs; [
-          nixfmt-rfc-style
-          nixd
-        ];
+        lsp.ccpp = with pkgs; [ clang-tools ];
+        lsp.css = with pkgs; [vscode-langservers-extracted];
+        lsp.json = with pkgs; [vscode-langservers-extracted];
+        lsp.lua = with pkgs; [ lua-language-server stylua ];
+        lsp.md = with pkgs; [marksman];
+        lsp.nix = with pkgs; [ nixfmt-rfc-style nixd ];
+        lsp.rust = with pkgs; [ rust-analyzer (rust-bin.stable.latest.default.override {extensions = ["rust-src"];}) ];
+        lsp.toml = with pkgs; [taplo];
         lsp.ts = with pkgs; [nodePackages_latest.typescript-language-server];
-        lsp.ccpp = with pkgs; [
-          clang-tools
-        ];
         general = with pkgs; [
           curl
           fd
@@ -189,6 +182,9 @@
             ccpp = true;
             rust = true;
             lua = true;
+            json = true;
+            css = true;
+            toml = true;
             nix = true;
             md = true;
             ts = true;
