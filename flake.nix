@@ -1,7 +1,7 @@
 {
   description = "A Lua-natic's neovim flake, with extra cats! nixCats!";
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/release-24.11";
     nixCats.url = "github:BirdeeHub/nixCats-nvim";
 
     rust-overlay.url = "github:oxalica/rust-overlay";
