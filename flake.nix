@@ -9,6 +9,8 @@
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     neovim-nightly-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
+    care-nvim.url = "github:max397574/care.nvim";
+
     plugins-lz-n.url = "github:nvim-neorocks/lz.n";
     plugins-lz-n.flake = false;
     plugins-base16-nvim.url = "github:RRethy/base16-nvim";
@@ -17,18 +19,8 @@
     plugins-nvim-lspconfig.flake = false;
     plugins-lazydev-nvim.url = "github:folke/lazydev.nvim";
     plugins-lazydev-nvim.flake = false;
-    plugins-care-nvim.url = "github:max397574/care.nvim";
-    plugins-care-nvim.flake = false;
     plugins-care-cmp.url = "github:max397574/care-cmp";
     plugins-care-cmp.flake = false;
-    plugins-nvim-cmp.url = "github:hrsh7th/nvim-cmp";
-    plugins-nvim-cmp.flake = false;
-    plugins-cmp-nvim-lsp.url = "github:hrsh7th/cmp-nvim-lsp";
-    plugins-cmp-nvim-lsp.flake = false;
-    plugins-cmp-cmdline.url = "github:hrsh7th/cmp-cmdline";
-    plugins-cmp-cmdline.flake = false;
-    plugins-lspkind-nvim.url = "github:onsails/lspkind-nvim";
-    plugins-lspkind-nvim.flake = false;
     plugins-resession-nvim.url = "github:stevearc/resession.nvim";
     plugins-resession-nvim.flake = false;
     plugins-resession-telescope-nvim.url = "github:scottmckendry/telescope-resession.nvim";
@@ -68,6 +60,7 @@
           dependencyOverlays = [
             (utils.sanitizedPluginOverlay inputs)
             inputs.rust-overlay.overlays.default
+            inputs.care-nvim.overlays.default
           ];
         in {
           inherit dependencyOverlays;
@@ -119,19 +112,12 @@
         lsp.help = [helpview-nvim];
         ui.telescope.enabled = [plenary-nvim];
         git = [gitsigns-nvim];
-        completion.nvim-cmp = [
-          nvim-cmp
-          cmp-nvim-lsp
-          lspkind-nvim
-          cmp-cmdline
+        completion.care = [
+          pkgs.vimPlugins.care-nvim
+          care-cmp
           nvim-cmp-buffer
           nvim-cmp-path
           nvim-cmp-spell
-        ];
-        completion.care = [
-          care-nvim
-          care-cmp
-          nvim-cmp-path
         ];
       };
       optionalPlugins = with pkgs.neovimPlugins; {
@@ -157,9 +143,9 @@
         hasTruthyValue = builtins.any (v: v) (builtins.attrValues attrs);
       in
         attrs // {enabled = hasTruthyValue;};
-      defaultConfig = {pkgs, ...}: completionEngine: {
+      defaultConfig = {pkgs, ...}: {wrapped}: {
         settings = {
-          wrapRc = false;
+          wrapRc = wrapped;
           viAlias = false;
           vimAlias = false;
           extraName = "nixovim";
@@ -202,12 +188,12 @@
             statusline = true;
             statuscolumn = true;
           };
-          completion.${completionEngine} = true;
+          completion.care = true;
         };
       };
     in {
-      nvim-cmp = args: defaultConfig args "nvim-cmp";
-      nvim = args: defaultConfig args "care";
+      nvimdev = args: defaultConfig args {wrapped = false; };
+      nvim = args: defaultConfig args {wrapped = true; };
     };
     defaultPackageName = "nvim";
   in
