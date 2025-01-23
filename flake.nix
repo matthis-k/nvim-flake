@@ -82,7 +82,7 @@
         lsp.json = with pkgs; [vscode-langservers-extracted];
         lsp.lua = with pkgs; [ lua-language-server stylua ];
         lsp.md = with pkgs; [marksman];
-        lsp.nix = with pkgs; [ nixfmt-rfc-style nixd ];
+        lsp.nix = with pkgs; [ nixfmt-rfc-style nil ];
         lsp.rust = with pkgs; [ rust-analyzer (rust-bin.stable.latest.default.override {extensions = ["rust-src"];}) ];
         lsp.toml = with pkgs; [taplo];
         lsp.ts = with pkgs; [nodePackages_latest.typescript-language-server];
