@@ -9,6 +9,9 @@
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     neovim-nightly-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
+    nil_ls.url = "github:oxalica/nil";
+    nil_ls.inputs.nixpkgs.follows = "nixpkgs";
+
     care-nvim.url = "github:max397574/care.nvim";
 
     plugins-lz-n.url = "github:nvim-neorocks/lz.n";
@@ -61,6 +64,7 @@
             (utils.sanitizedPluginOverlay inputs)
             inputs.rust-overlay.overlays.default
             inputs.care-nvim.overlays.default
+            inputs.nil_ls.overlays.nil
           ];
         in {
           inherit dependencyOverlays;
