@@ -26,7 +26,7 @@ require("lz.n").load({
     end,
 })
 
-for _, file in ipairs(require("utils").lua_files(vim.fn.stdpath("config") .. "/lua/lsp/server_configurations")) do
+for _, file in ipairs(require("utils").lua_files(nixCats.configDir .. "/lua/lsp/server_configurations")) do
     local config = require("lsp.server_configurations." .. file.basename)
     if config and type(config) == "table" then
         require("lspconfig")[file.basename].setup(config)

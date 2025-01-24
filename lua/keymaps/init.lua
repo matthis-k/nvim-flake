@@ -52,4 +52,4 @@ map("i", "<c-bs>", "<c-w>")
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 
-map("n", "<leader>vc", "<cmd>cd " .. vim.fn.stdpath("config") .. " | e init.lua <cr>", { desc = "Config" })
+map("n", "<leader>vc", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <cr>", { desc = "Config" })
