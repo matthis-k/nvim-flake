@@ -100,7 +100,7 @@ local function number_column(win, line)
 end
 
 local function fold_column(win, line)
-    if not cache then return end
+    if (not cache) or (not cache.folds)  then return end
     if cache.folds.hide then
         return part("", false)
     elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
