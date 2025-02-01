@@ -99,8 +99,8 @@ local function number_column(win, line)
     else
         hl = "StcLineNumber"
     end
-    text = string.rep(" ", cache.numberwidth)
-    if vim.v.virtnum == 0 and cache.numberwidth > 0 then
+    text = string.rep(" ", cache.numberwidth or 0)
+    if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
         local number
         if vim.wo[win].number and vim.wo[win].relativenumber then
             number = (vim.v.relnum == 0) and vim.v.lnum or vim.v.relnum
