@@ -11,11 +11,19 @@ local cache = {}
 local function init_cache(win)
     cache = {}
     cache.lines = {}
-    local first_line = vim.fn.line("w0", win)
-    local last_line = vim.fn.line("w$", win)
+    cache.first_line = vim.fn.line("w0", win)
+    cache.cursor_line = vim.fn.line(".", win)
+    cache.last_line = vim.fn.line("w$", win)
+    if vim.wo[win].relativenumber and not vim.wo[win].number then
+        cache.numberwidth = math.max(3, vim.wo[win].numberwidth)
+    elseif vim.wo.number then
+        cache.numberwidth = math.max(vim.wo[win].numberwidth, string.len(tostring(cache.last_line)) + 1)
+    else
+        cache.numberwidth = 0
+    end
     local buf = vim.api.nvim_win_get_buf(win)
     local ns_ids = vim.api.nvim_get_namespaces()
-    for line = first_line, last_line do
+    for line = cache.first_line, cache.last_line do
         cache.lines[line] = {}
         for _, ns_id in pairs(ns_ids) do
             cache.lines[line][ns_id] = {}
@@ -25,8 +33,8 @@ local function init_cache(win)
     for _, ns_id in pairs(ns_ids) do
         for _, sign in ipairs(vim.api.nvim_buf_get_extmarks(
             buf, ns_id,
-            { first_line - 1, 0 },
-            { last_line - 1, -1 },
+            { cache.first_line - 1, 0 },
+            { cache.last_line - 1, -1 },
             { type = "sign", details = true }
         )) do
             table.insert(cache.lines[sign[2] + 1][ns_id], sign)
@@ -34,7 +42,7 @@ local function init_cache(win)
     end
 
     local empty_ns_lines = {}
-    for line = first_line, last_line do
+    for line = cache.first_line, cache.last_line do
         for _, ns_id in pairs(ns_ids) do
             local ns_cache = cache.lines[line][ns_id]
             empty_ns_lines[ns_id] = empty_ns_lines[ns_id] or 0
@@ -45,7 +53,7 @@ local function init_cache(win)
     end
     cache.ns_empty = {}
     for _, ns_id in pairs(ns_ids) do
-        local visible_lines = last_line - first_line + 1
+        local visible_lines = cache.last_line - cache.first_line + 1
         local is_ns_emtpy = empty_ns_lines[ns_id] >= visible_lines
         cache.ns_empty[ns_id] = is_ns_emtpy
     end
@@ -53,7 +61,7 @@ local function init_cache(win)
 
     cache.folds = {}
 
-    local cursor_line = vim.fn.line(".")
+    local cursor_line = cache.cursor_line
     local fold_level = vim.fn.foldlevel(cursor_line)
 
     local start_line = cursor_line
@@ -70,12 +78,6 @@ local function init_cache(win)
     cache.folds.fold_level = vim.fn.foldlevel(".")
     cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
     cache.is_focused_window = vim.api.nvim_get_current_win() == win
-    cache.drawn_fold_starts = {}
-    cache.drawn_fold_end_skips = {}
-    for i = first_line, last_line do
-        cache.drawn_fold_end_skips[i] = vim.fn.screenpos(win, line, vim.fn.col({ line, "$" })).row -
-            vim.fn.screenpos(win, line, 0).row
-    end
 end
 
 
@@ -91,37 +93,55 @@ end
 local function number_column(win, line)
     local hl
     local is_focused = win == vim.api.nvim_get_current_win()
-    if vim.v.relnum == 0 and vim.wo.relativenumber and is_focused then
+    local show_relative = is_focused and vim.wo[win].relativenumber
+    if vim.v.relnum == 0 and vim.wo[win].relativenumber and is_focused then
         hl = "StcCurrentLineNumber"
     else
         hl = "StcLineNumber"
     end
-    return part("%l", false, hl, "v:lua.click_handlers.click_line")
+    text = string.rep(" ", cache.numberwidth)
+    if vim.v.virtnum == 0 and cache.numberwidth > 0 then
+        local number
+        if vim.wo[win].number and vim.wo[win].relativenumber then
+            number = (vim.v.relnum == 0) and vim.v.lnum or vim.v.relnum
+        elseif vim.wo[win].number then
+            number = vim.v.lnum
+        elseif vim.wo[win].relativenumber then
+            number = vim.v.relnum
+        end
+        if number then
+            text = string.format("%" .. ((vim.v.relnum == 0) and "-" or "") .. cache.numberwidth .. "d", number)
+        end
+    end
+    return part(text, false, hl, "v:lua.click_handlers.click_line")
 end
 
 local function fold_column(win, line)
-    if (not cache) or (not cache.folds)  then return end
+    if (not cache) or (not cache.folds) then return end
+    local symbol = ""
+    local hl = "StcFold"
     if cache.folds.hide then
-        return part("", false)
     elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
-        return part(" ", false, "StcFold")
-    elseif cache.folds.on_closed_fold and line == cache.folds.start_line then
-        return part("🭽", false, "StcFolded")
+        symbol = " "
+    elseif cache.folds.on_closed_fold and line == cache.folds.start_line and vim.v.virtnum == 0 then
+        symbol, hl = "🭽", "StcFolded"
+    elseif cache.folds.on_closed_fold and line == cache.folds.start_line and vim.v.virtnum > 0 then
+        symbol, hl = "▏", "StcFolded"
     elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
-        return part("▔", false, "StcFolded")
+        symbol, hl = "▔", "StcFolded"
     elseif line == cache.folds.start_line then
-        local has_drawn_start = cache.drawn_fold_starts[line]
-        cache.drawn_fold_starts[line] = true
-        return part(has_drawn_start and "▏" or "🭽", false, "StcFold")
+        symbol = vim.v.virtnum > 0 and "▏" or "🭽"
     elseif cache.folds.start_line < line and line < cache.folds.end_line then
-        return part("▏", false, "StcFold")
+        symbol = "▏"
     elseif line == cache.folds.end_line then
-        local is_last = cache.drawn_fold_end_skips[line] <= 0
-        cache.drawn_fold_end_skips[line] = cache.drawn_fold_end_skips[line] - 1
-        return part(is_last and "🭼" or "▏", false, "StcFold")
+        local pos_current = vim.fn.screenpos(winid, line, 1)
+        local pos_next = vim.fn.screenpos(winid, line + 1, 1)
+        local total_wraps = pos_next.row - pos_current.row - 1
+        symbol = vim.v.virtnum == total_wraps and "🭼" or "▏"
     else
-        return part(" ", false, "StcFold")
+        symbol = " "
     end
+    return part(symbol, false, hl)
 end
 
 ---Shows sign with highest priority matching the filter
