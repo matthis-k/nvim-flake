@@ -6,7 +6,7 @@ require("lz.n").load({
     "lazydev-nvim",
     cmd = "LazyDev",
     ft = "lua",
-    after = function ()
+    after = function()
         require("lazydev").setup({
         })
         require("lazydev").setup({
@@ -19,19 +19,24 @@ require("lz.n").load({
                 cmp = false,
                 coc = false,
             },
-            enabled = function (root_dir)
+            enabled = function(root_dir)
                 return not vim.uv.fs_stat(root_dir .. "/.luarc.json")
             end,
         })
     end,
 })
-
-for _, file in ipairs(require("utils").lua_files(nixCats.configDir .. "/lua/lsp/server_configurations")) do
-    local config = require("lsp.server_configurations." .. file.basename)
-    if config and type(config) == "table" then
-        require("lspconfig")[file.basename].setup(config)
+require("lz.n").load({
+    "nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" },
+    after = function()
+        for _, file in ipairs(require("utils").lua_files(nixCats.configDir .. "/lua/lsp/server_configurations")) do
+            local config = require("lsp.server_configurations." .. file.basename)
+            if config and type(config) == "table" then
+                require("lspconfig")[file.basename].setup(config)
+            end
+        end
     end
-end
+})
 
 vim.diagnostic.config({
     update_in_insert = true,
@@ -40,7 +45,7 @@ vim.diagnostic.config({
     severity_sort = true,
     signs = {
         text = vim.iter(require("constants").signs.diagnostics)
-            :map(function (sign)
+            :map(function(sign)
                 return sign.text
             end)
             :totable(),
@@ -76,7 +81,7 @@ local capability_keymap_table = {
         {
             "n",
             "<space>lf",
-            function ()
+            function()
                 vim.lsp.buf.format({ async = true })
             end,
             { silent = true, desc = "Format" },
@@ -95,7 +100,7 @@ local capability_keymap_table = {
         {
             "v",
             "<space>lf",
-            function ()
+            function()
                 vim.lsp.buf.range_format({ async = true })
             end,
             { silent = true, desc = "Format range" },
@@ -117,15 +122,15 @@ local capability_keymap_table = {
     },
     always = {
         { "n", "gl",        vim.diagnostic.open_float,                           { silent = true, desc = "Open diagnostics" } },
-        { "n", "<space>lk", function () vim.diagnostic.jump({ count = -1 }) end, { silent = true, desc = "Go to prev diagnostic" } },
-        { "n", "<space>lj", function () vim.diagnostic.jump({ count = 1 }) end,  { silent = true, desc = "Go to next diagnostic" } },
+        { "n", "<space>lk", function() vim.diagnostic.jump({ count = -1 }) end,  { silent = true, desc = "Go to prev diagnostic" } },
+        { "n", "<space>lj", function() vim.diagnostic.jump({ count = 1 }) end,   { silent = true, desc = "Go to next diagnostic" } },
     },
 }
 
 vim.api.nvim_create_augroup("LspKeymaps", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = "LspKeymaps",
-    callback = function (ev)
+    callback = function(ev)
         local client = vim.lsp.get_client_by_id(ev.data.client_id)
         if not client then
             return
