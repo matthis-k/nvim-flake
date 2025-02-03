@@ -94,7 +94,7 @@ local function number_column(win, line)
     local hl
     local is_focused = win == vim.api.nvim_get_current_win()
     local show_relative = is_focused and vim.wo[win].relativenumber
-    if vim.v.relnum == 0 and vim.wo[win].relativenumber and is_focused then
+    if vim.v.relnum == 0 and vim.wo[win].relativenumber then
         hl = "StcCurrentLineNumber"
     else
         hl = "StcLineNumber"
@@ -129,14 +129,22 @@ local function fold_column(win, line)
         symbol, hl = "▏", "StcFolded"
     elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
         symbol, hl = "▔", "StcFolded"
+    elseif line == cache.folds.start_line and vim.v.virtnum == 0 then
+        symbol = "🭽"
     elseif line == cache.folds.start_line then
-        symbol = vim.v.virtnum > 0 and "▏" or "🭽"
+        symbol = "▏"
     elseif cache.folds.start_line < line and line < cache.folds.end_line then
         symbol = "▏"
     elseif line == cache.folds.end_line then
-        local pos_current = vim.fn.screenpos(winid, line, 1)
-        local pos_next = vim.fn.screenpos(winid, line + 1, 1)
-        local total_wraps = pos_next.row - pos_current.row - 1
+        local total_wraps = 0
+        local win_width = vim.api.nvim_win_get_width(win)
+        local buf = vim.api.nvim_win_get_buf(win)
+        local text = vim.api.nvim_buf_get_lines(buf, line - 1, line, false)[1] or ""
+        local text_width = vim.fn.strwidth(text)
+        local wrap_enabled = vim.wo.wrap
+        if wrap_enabled then
+            total_wraps = math.floor(text_width / win_width)
+        end
         symbol = vim.v.virtnum == total_wraps and "🭼" or "▏"
     else
         symbol = " "
