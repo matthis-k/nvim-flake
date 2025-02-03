@@ -161,6 +161,7 @@ end
 local function signs(win, line, filter, opts)
     local width = opts and opts.width or 2
     local hide_empty = opts and opts.hide_empty or false
+    local fill_char = opts and opts.fill_char or " "
     local ns_ids = vim.iter(cache.ns_ids or vim.api.nvim_get_namespaces())
         :map(function (name, id)
             if (filter == nil) or filter(name) then return id end
@@ -185,7 +186,7 @@ local function signs(win, line, filter, opts)
             end
             return acc
         end)
-    local text = (" "):rep(width, "")
+    local text = (fill_char):rep(width)
     if extmark and extmark[4] and extmark[4].sign_text then
         text = utf8sub(extmark[4].sign_text, 1, width)
     end
@@ -210,14 +211,14 @@ function StatusColumn()
     if line == first_line then
         init_cache(win)
     end
-
     local stc = part({
         signs(win, line,
             function (name)
-                return not (name:match("vim%.lsp%..+%..+%/diagnostic%/signs")
+                return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
                     or name:match("gitsigns_signs.*"))
-            end, { width = 2, hide_empty = true }),
-        signs(win, line, function (name) return name:match("vim%.lsp%..+%..+%/diagnostic%/signs") end, { width = 2 }),
+            end, { width = 2, hide_empty = true, fill_char = "-" }),
+        signs(win, line, function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end,
+            { width = 2 }),
         fold_column(win, line),
         number_column(win, line),
         signs(win, line, function (name) return name:match("gitsigns_signs_.*") end, { width = 1 }),
