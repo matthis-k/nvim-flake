@@ -1,5 +1,4 @@
-local builder = require("ui.linebuilder")
-local part = builder.part
+local Part = require("ui.lib.linepart")
 
 local M = {}
 M.cache = M.cache or {}
@@ -18,7 +17,7 @@ local function get_ahead_behind(git_info)
                 res.behind = tonumber(behind) or 0
             end
         end,
-        on_stderr = function (_, err)
+        on_stderr = function (_, _)
             res.error = "No remote"
         end,
         on_exit = function (_, exit_code)
@@ -47,15 +46,14 @@ function M.update_remotes()
     end
 end
 
-M.timer = vim.loop.new_timer()
+M.timer = vim.uv.new_timer()
 if M.timer then
     M.timer:start(
         0,
         300000,
         vim.schedule_wrap(function ()
             M.update_remotes()
-        end)
-    )
+        end))
 end
 
 
@@ -71,78 +69,122 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 })
 
 
----Creates the git branch part of the status line
----@return nixovim.ui.line.Part
-function M.branch()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local git_status = vim.b[bufnr].gitsigns_status_dict
-    if not git_status then return {} end
-    local branch = git_status.head
+-- Git branch: shows the current branch name.
+M.branch = {
+    hl = "StlGitBranch",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status then return "" end
+        return git_status.head or ""
+    end,
+}
 
-    return part(branch, false, "StlGitBranch")
-end
+M.status = {}
+M.status.added = {
+    hl = "StlGitAdded",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status or not (git_status.added and git_status.added > 0) then return "" end
+        return string.format("+%d", git_status.added)
+    end,
+}
+M.status.changed = {
+    hl = "StlGitChanged",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status or not (git_status.changed and git_status.changed > 0) then return "" end
+        return string.format("~%d", git_status.changed)
+    end,
+}
+M.status.removed = {
+    hl = "StlGitDeleted",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status or not (git_status.removed and git_status.removed > 0) then return "" end
+        return string.format("-%d", git_status.removed)
+    end,
+}
+M.status.all = {
+    children = {
+        Part(M.status.added),
+        Part(M.status.changed),
+        Part(M.status.removed),
+    },
+}
 
----Creates the git status part of the status line
----@return nixovim.ui.line.Part
-function M.status()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local git_status = vim.b[bufnr].gitsigns_status_dict
-    if not git_status then return {} end
+-- Git remote: shows ahead/behind counts and a check mark when in sync.
+M.remote = {}
+M.remote.ahead = {
+    hl = "StlGitRemoteAhead",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status then return "" end
+        if not M.cache[git_status.root] then M.update_remotes() end
+        local remote = M.cache[git_status.root]
+        if remote.error or not (remote.ahead and remote.ahead > 0) then return "" end
+        return string.format("↑%d", remote.ahead)
+    end,
+}
+M.remote.behind = {
+    hl = "StlGitRemoteBehind",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status then return "" end
+        if not M.cache[git_status.root] then M.update_remotes() end
+        local remote = M.cache[git_status.root]
+        if remote.error or not (remote.behind and remote.behind > 0) then return "" end
+        return string.format("↓%d", remote.behind)
+    end,
+}
+M.remote.up_to_date = {
+    hl = "StlGitBranch",
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status then return "" end
+        if not M.cache[git_status.root] then M.update_remotes() end
+        local remote = M.cache[git_status.root]
+        if remote.error then return "" end
+        if remote.ahead == 0 and remote.behind == 0 then
+            return "✓"
+        end
+        return ""
+    end,
+}
+M.remote.all = {
+    children = {
+        Part(M.remote.ahead),
+        Part(M.remote.behind),
+        Part(M.remote.up_to_date),
+    },
+}
 
-    local parts = {}
-    if git_status.added and git_status.added > 0 then
-        table.insert(parts, part(string.format("+%d", git_status.added), false, "StlGitAdded"))
-    end
-    if git_status.changed and git_status.changed > 0 then
-        table.insert(parts, part(string.format("~%d", git_status.changed), false, "StlGitChanged"))
-    end
-    if git_status.removed and git_status.removed > 0 then
-        table.insert(parts, part(string.format("-%d", git_status.removed), false, "StlGitDeleted"))
-    end
-    return part(parts, { before = true, after = false, separator = true })
-end
+-- Git icon: a static icon.
+M.icon = {
+    text = function ()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local git_status = vim.b[bufnr].gitsigns_status_dict
+        if not git_status then return "" end
+        return ""
+    end,
+    hl = "StlGitBranch",
+}
 
---]]
-
----Creates the git remote ahead/behind part of the status line
----@return nixovim.ui.line.Part
-function M.remote()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local git_status = vim.b[bufnr].gitsigns_status_dict
-    if not git_status then
-        return {}
-    end
-
-    if not M.cache[git_status.root] then M.update_remotes() end
-    local remote = M.cache[git_status.root]
-    local parts = {}
-    if remote.error then return part("", false) end
-    if remote.ahead > 0 then
-        table.insert(parts, part(string.format("↑%d", remote.ahead), false, "StlGitRemoteAhead"))
-    end
-    if remote.behind > 0 then
-        table.insert(parts, part(string.format("↓%d", remote.behind), false, "StlGitRemoteBehind"))
-    end
-    if remote.behind == 0 and remote.ahead == 0 then
-        table.insert(parts, part(string.format("✓", remote.behind), false, "StlGitBranch"))
-    end
-    return part(parts, { before = false, after = true, separator = true })
-end
-
-function M.icon()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local git_status = vim.b[bufnr].gitsigns_status_dict
-    if not git_status then return {} end
-    -- this some how still uses 2 spaces, there fore
-    --some before after magic instead of separators
-    return part("")
-end
-
-function M.all()
-    return part(
-        { M.icon(), M.remote(), M.branch(), M.status() },
-        false, "StlGitBranch"
-    )
-end
+-- All git parts combined.
+M.all = {
+    children = {
+        Part(M.icon),
+        Part(M.branch),
+        Part(M.remote.all),
+        Part(M.status.all),
+    },
+    child_sep = Part(" "),
+}
 
 return M

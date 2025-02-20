@@ -2,33 +2,40 @@ if not nixCats("ui.statusline") then
     return
 end
 
-local builder = require("ui.linebuilder")
-local part = builder.part
-
+local Part = require("ui.lib.linepart")
 local hl = require("utils").compose_hl
 
 local stl = require("ui.statusline.common")
 local git = require("ui.statusline.git")
 
+local line = Part():children({
+    Part():hl(function (_, shared) return shared.mode_hl end):children({
+        Part(stl.mode):before(" "):after(" "),
+    }),
+    Part():hl("StlSectionB"):before(" "):after(" "):children({
+        Part(git.all),
+        Part():hl("StlSectionB"):before("["):after("]"):children({
+            Part(stl.modified),
+            Part(stl.readonly),
+        }):child_sep(" "),
+        Part(stl.filename),
+        Part(stl.diagnostics),
+    }):child_sep(" "),
+    Part():hl("StlSectionC"):children({
+    }),
+    Part():text("%="):hl("StlSectionC"),
+    Part():hl("StlSectionB"):before(" "):after(" "):children({
+        Part(stl.filetype),
+        Part(stl.encoding),
+    }),
+    Part():hl(function (_, shared) return shared.mode_hl end):before(" "):after(" "):children({
+        Part(stl.pos),
+    }),
+})
 ---Creates status line format string
 ---@return string
 function StatusLine()
-    local line = part({
-        part({ stl.mode() }, false, "StlSectionA"),
-        part({
-            git.all(),
-            stl.filename(),
-            stl.diagnostics(),
-        }, { separator = true }, "StlSectionB"),
-        part({}, nil, "StlSectionC"),
-        part("%=", nil, "StlSectionC"),
-        part({
-            stl.filetype(),
-            stl.encoding(),
-        }, nil, "StlSectionB"),
-        part({ stl.pos() }, nil, "StlSectionA"),
-    }, false)
-    return builder.part_to_str(line)
+    return line:eval()
 end
 
 vim.api.nvim_set_hl(0, "StlSectionA", hl({ fg = "@method", bg = "Normal", reverse = true }))

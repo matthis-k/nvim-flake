@@ -2,8 +2,7 @@ if not nixCats("ui.statuscolumn") then
     return
 end
 local utf8sub = require("utils").utf8sub
-local builder = require("ui.linebuilder")
-local part = builder.part
+local Part = require("ui.lib.linepart")
 
 local M = {}
 
@@ -86,112 +85,147 @@ function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
     vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
 end
 
----Implemetns the number colomn with _some_ support for vims options
----@param win integer The window id of the column drawn
----@param line integer What line we are at
----@return nixovim.ui.line.Part
-local function number_column(win, line)
-    local hl
-    local is_focused = win == vim.api.nvim_get_current_win()
-    local show_relative = is_focused and vim.wo[win].relativenumber
-    if vim.v.relnum == 0 and vim.wo[win].relativenumber then
-        hl = "StcCurrentLineNumber"
-    else
-        hl = "StcLineNumber"
-    end
-    text = string.rep(" ", cache.numberwidth or 0)
-    if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
-        local number
-        if vim.wo[win].number and vim.wo[win].relativenumber then
-            number = (vim.v.relnum == 0) and vim.v.lnum or vim.v.relnum
-        elseif vim.wo[win].number then
-            number = vim.v.lnum
-        elseif vim.wo[win].relativenumber then
-            number = vim.v.relnum
-        end
-        if number then
-            text = string.format("%" .. ((vim.v.relnum == 0) and "-" or "") .. cache.numberwidth .. "d", number)
-        end
-    end
-    return part(text, false, hl, "v:lua.click_handlers.click_line")
-end
-
-local function fold_column(win, line)
-    if (not cache) or (not cache.folds) then return end
-    local symbol = ""
-    local hl = "StcFold"
-    if cache.folds.hide then
-    elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
-        symbol = " "
-    elseif cache.folds.on_closed_fold and line == cache.folds.start_line and vim.v.virtnum == 0 then
-        symbol, hl = "🭽", "StcFolded"
-    elseif cache.folds.on_closed_fold and line == cache.folds.start_line and vim.v.virtnum > 0 then
-        symbol, hl = "▏", "StcFolded"
-    elseif cache.folds.on_closed_fold and line == cache.folds.end_line + 1 then
-        symbol, hl = "▔", "StcFolded"
-    elseif line == cache.folds.start_line and vim.v.virtnum == 0 then
-        symbol = "🭽"
-    elseif line == cache.folds.start_line then
-        symbol = "▏"
-    elseif cache.folds.start_line < line and line < cache.folds.end_line then
-        symbol = "▏"
-    elseif line == cache.folds.end_line then
-        local total_wraps = 0
-        local win_width = vim.api.nvim_win_get_width(win)
-        local buf = vim.api.nvim_win_get_buf(win)
-        local text = vim.api.nvim_buf_get_lines(buf, line - 1, line, false)[1] or ""
-        local text_width = vim.fn.strwidth(text)
-        local wrap_enabled = vim.wo.wrap
-        if wrap_enabled then
-            total_wraps = math.floor(text_width / win_width)
-        end
-        symbol = vim.v.virtnum == total_wraps and "🭼" or "▏"
-    else
-        symbol = " "
-    end
-    return part(symbol, false, hl)
-end
-
----Shows sign with highest priority matching the filter
----@param win integer The window id of the column drawn
----@param line integer What line we are at
----@param filter? any
----@param opts? any
----@return nixovim.ui.line.Part
-local function signs(win, line, filter, opts)
-    local width = opts and opts.width or 2
-    local hide_empty = opts and opts.hide_empty or false
-    local fill_char = opts and opts.fill_char or " "
-    local ns_ids = vim.iter(cache.ns_ids or vim.api.nvim_get_namespaces())
-        :map(function (name, id)
-            if (filter == nil) or filter(name) then return id end
-        end)
-        :totable()
-    if hide_empty and vim.iter(ns_ids):all(function (ns_id)
-            return cache.ns_empty and cache.ns_empty[ns_id] and cache.ns_empty[ns_id]
-        end) then
-        width = 0
-    end
-    local extmarks = vim.iter(ns_ids)
-        :map(function (ns_id)
-            return cache.lines and cache.lines[line] and cache.lines[line][ns_id]
-        end)
-        :flatten()
-        :totable()
-    local extmark = vim.iter(extmarks)
-        :fold({ [4] = { priority = 0 } }, function (acc, cur)
-            if acc[4].priority < cur[4].priority
-                or (acc[4].priority == cur[4].priority and acc[4].ns_id < cur[4].ns_id) then
-                acc = cur
+local number_column = {
+    cache = function (lcache, shared)
+        lcache.is_focused = shared.win == vim.api.nvim_get_current_win()
+        lcache.show_relative = is_focused and vim.wo[shared.win].relativenumber
+    end,
+    text = function (lcache, shared)
+        text = string.rep(" ", cache.numberwidth or 0)
+        if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
+            local number
+            if vim.wo[shared.win].number and vim.wo[shared.win].relativenumber then
+                number = (vim.v.relnum == 0) and vim.v.lnum or vim.v.relnum
+            elseif vim.wo[shared.win].number then
+                number = vim.v.lnum
+            elseif vim.wo[shared.win].relativenumber then
+                number = vim.v.relnum
             end
-            return acc
-        end)
-    local text = (fill_char):rep(width)
-    if extmark and extmark[4] and extmark[4].sign_text then
-        text = utf8sub(extmark[4].sign_text, 1, width)
-    end
-    return part(text, false, extmark[4].sign_hl_group)
+            if number then
+                text = string.format("%" .. ((vim.v.relnum == 0) and "-" or "") .. cache.numberwidth .. "d", number)
+            end
+        end
+        return text
+    end,
+    hl = function (lcache, shared)
+        if vim.v.relnum == 0 and vim.wo[shared.win].relativenumber then
+            return "StcCurrentLineNumber"
+        else
+            return "StcLineNumber"
+        end
+    end,
+    on_click = "v:lua.click_handlers.click_line",
+}
+
+local fold_column = {
+    cache = function (lcache, shared)
+        if (not cache) or (not cache.folds) then return end
+        local symbol = ""
+        local hl = "StcFold"
+        if cache.folds.hide then
+        elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
+            symbol = " "
+        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.start_line and vim.v.virtnum == 0 then
+            symbol, hl = "🭽", "StcFolded"
+        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.start_line and vim.v.virtnum > 0 then
+            symbol, hl = "▏", "StcFolded"
+        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.end_line + 1 then
+            symbol, hl = "▔", "StcFolded"
+        elseif vim.v.lnum == cache.folds.start_line and vim.v.virtnum == 0 then
+            symbol = "🭽"
+        elseif vim.v.lnum == cache.folds.start_line then
+            symbol = "▏"
+        elseif cache.folds.start_line < vim.v.lnum and vim.v.lnum < cache.folds.end_line then
+            symbol = "▏"
+        elseif vim.v.lnum == cache.folds.end_line then
+            local total_wraps = 0
+            local win_width = vim.api.nvim_win_get_width(shared.win)
+            local buf = vim.api.nvim_win_get_buf(shared.win)
+            local text = vim.api.nvim_buf_get_lines(buf, vim.v.lnum - 1, vim.v.lnum, false)[1] or ""
+            local text_width = vim.fn.strwidth(text)
+            local wrap_enabled = vim.wo.wrap
+            if wrap_enabled then
+                total_wraps = math.floor(text_width / win_width)
+            end
+            symbol = vim.v.virtnum == total_wraps and "🭼" or "▏"
+        else
+            symbol = " "
+        end
+        lcache.text = symbol
+        lcache.hl = hl
+    end,
+    text = function (lcache, shared)
+        return lcache.text
+    end,
+    hl = function (lcache, shared)
+        return lcache.hl
+    end,
+}
+
+local function signs()
+    return {
+        cache = function (lcache, shared)
+            local width = lcache.width or 2
+            local hide_empty = lcache.hide_empty or false
+            local fill_char = lcache.fill_char or " "
+            local ns_ids = vim.iter(cache.ns_ids or vim.api.nvim_get_namespaces())
+                :map(function (name, id)
+                    if (lcache.filter == nil) or lcache.filter(name) then return id end
+                end)
+                :totable()
+            if hide_empty and vim.iter(ns_ids):all(function (ns_id)
+                    return cache.ns_empty and cache.ns_empty[ns_id] and cache.ns_empty[ns_id]
+                end) then
+                width = 0
+            end
+            local extmarks = vim.iter(ns_ids)
+                :map(function (ns_id)
+                    return cache.lines and cache.lines[vim.v.lnum] and cache.lines[vim.v.lnum][ns_id]
+                end)
+                :flatten()
+                :totable()
+            local extmark = vim.iter(extmarks)
+                :fold({ [4] = { priority = 0 } }, function (acc, cur)
+                    if acc[4].priority < cur[4].priority
+                        or (acc[4].priority == cur[4].priority and acc[4].ns_id < cur[4].ns_id) then
+                        acc = cur
+                    end
+                    return acc
+                end)
+            local text = (fill_char):rep(width)
+            if extmark and extmark[4] and extmark[4].sign_text then
+                text = utf8sub(extmark[4].sign_text, 1, width)
+            end
+            lcache.text = text
+            lcache.hl = extmark[4].sign_hl_group
+        end,
+        text = function (lcache, shared)
+            return lcache.text
+        end,
+        hl = function (lcache, shared)
+            return lcache.hl
+        end,
+    }
 end
+
+local stc = Part():cache(function (_, shared) shared.win = vim.g.statusline_winid end):children({
+    Part(signs):cache_prepend(function (lcache, _)
+        lcache.filter = function (name)
+            return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
+                or name:match("gitsigns_signs.*"))
+        end
+        lcache.hide_empty = true
+    end),
+    Part(signs):cache_prepend(function (lcache, _)
+        lcache.filter = function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end
+    end),
+    Part(fold_column),
+    Part(number_column),
+    Part(signs):cache_prepend(function (lcache, _)
+        lcache.filter = function (name) return name:match("gitsigns_signs_.*") end
+        lcache.width = 1
+    end),
+})
 
 ---Defines my status column
 ---@return string
@@ -200,33 +234,19 @@ function StatusColumn()
     if not vim.wo[win].statuscolumn then
         return ""
     end
-    local line = vim.v.lnum
+
     local first_line = vim.fn.line("w0", win)
     local last_line = vim.fn.line("w$", win)
 
-    if line < first_line or last_line < line then
+    if vim.v.lnum < first_line or last_line < vim.v.lnum then
         return ""
     end
 
-    if line == first_line then
+    if vim.v.lnum == first_line then
         init_cache(win)
     end
-    local stc = part({
-        signs(win, line,
-            function (name)
-                return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
-                    or name:match("gitsigns_signs.*"))
-            end, { width = 2, hide_empty = true, fill_char = "-" }),
-        signs(win, line, function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end,
-            { width = 2 }),
-        fold_column(win, line),
-        number_column(win, line),
-        signs(win, line, function (name) return name:match("gitsigns_signs_.*") end, { width = 1 }),
-    }, false, line == vim.fn.line(".") and "StcCurrentLineNumber" or "StcLineNumber")
 
-    local res = builder.part_to_str(stc)
-
-    return res
+    return stc:eval()
 end
 
 local hl = require("utils").compose_hl

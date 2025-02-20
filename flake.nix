@@ -190,6 +190,7 @@
               buffers = true;
             };
             statusline = true;
+            tabline = true;
             statuscolumn = true;
           };
           completion.care = true;
