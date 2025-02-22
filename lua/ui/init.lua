@@ -3,5 +3,5 @@ if not nixCats("ui.enabled") then
 end
 
 for _, file in ipairs(require("utils").dirs(nixCats.configDir .. "/lua/ui")) do
-    require("ui." .. file.basename)
+    local status, err = pcall(require, "ui." .. file.basename)
 end
