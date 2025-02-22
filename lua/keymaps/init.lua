@@ -52,4 +52,9 @@ map("i", "<c-bs>", "<c-w>")
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 
+map("n", "<leader>v", "<nop>", { desc = "Vim" })
 map("n", "<leader>vc", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <cr>", { desc = "Config" })
+
+map("n", "<leader>q", "<nop>", { desc = "Quickfix" })
+map("n", "<leader>qj", "<cmd>cnext<cr>", { desc = "Next Quickfix", silent = true })
+map("n", "<leader>qk", "<cmd>cprev<cr>", { desc = "Prev Quickfix", silent = true })

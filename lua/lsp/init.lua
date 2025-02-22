@@ -112,11 +112,13 @@ local capability_keymap_table = {
         { "n", "<space>lD", vim.lsp.buf.type_definition, { silent = true, desc = "Go to type definition" } },
     },
     ["workspace/workspaceFolders"] = {
+        { "n", "<leader>lw", "<nop>",                             { desc = "Workspace" } },
         { "n", "<space>lwa", vim.lsp.buf.add_workspace_folder,    { silent = true, desc = "Add folder" } },
         { "n", "<space>lwr", vim.lsp.buf.remove_workspace_folder, { silent = true, desc = "Remove folder" } },
         { "n", "<space>lwl", list_workspace_folders,              { silent = true, desc = "List folders" } },
     },
     always = {
+        { "n", "<leader>l", "<nop>",                                             { desc = "Lsp" } },
         { "n", "gl",        vim.diagnostic.open_float,                           { silent = true, desc = "Open diagnostics" } },
         { "n", "<space>lk", function () vim.diagnostic.jump({ count = -1 }) end, { silent = true, desc = "Go to prev diagnostic" } },
         { "n", "<space>lj", function () vim.diagnostic.jump({ count = 1 }) end,  { silent = true, desc = "Go to next diagnostic" } },
