@@ -54,7 +54,7 @@ care.setup({
         },
         ghost_text = {
             enabled = true,
-            position = "overlay",
+            position = "inline",
         },
     },
     snippet_expansion = function (snippet_body)
@@ -64,11 +64,17 @@ care.setup({
     confirm_behavior = "insert",
     keyword_pattern = [[\%(-\?\d\+\%(\.\d\+\)\?\|\h\w*\%(-\w*\)*\)]],
     sources = {
-        cmp_lazydev = {
+        ["cmp_lazydev"] = {
             enabled = function ()
                 return vim.api.nvim_buf_get_option(0, "filetype") == "lua"
             end,
+            priority = 6,
         },
+        ["lsp"] = { priority = 6 },
+        ["path"] = { priority = 4 },
+        ["cmp_buffer"] = { priority = 3 },
+        ["cmp_spell"] = { priority = 2 },
+        ["cmp_buffer-lines"] = { priority = 1 },
     },
     preselect = false,
     sorting_direction = "top-down",
@@ -85,7 +91,11 @@ care.setup({
 })
 
 vim.keymap.set("i", "<c-space>", function ()
-    care.api.complete()
+    if not care.api.is_open() then
+        care.api.complete()
+    else
+        care.api.close()
+    end
 end)
 
 vim.keymap.set("i", "<c-p>", "<Plug>(CareSelectPrev)")
@@ -131,45 +141,3 @@ for i, label in ipairs(labels) do
         care.api.confirm()
     end)
 end
-
-vim.keymap.set("i", "<c-x><c-o>", function ()
-    care.api.complete(function (name)
-        return name == "lsp"
-    end)
-end)
-
-vim.keymap.set("i", "<c-x><c-l>", function ()
-    care.api.complete(function (name)
-        return name == "cmp_buffer-lines"
-    end)
-end)
-
-vim.keymap.set("i", "<c-x><c-f>", function ()
-    care.api.complete(function (name)
-        return name == "cmp_path"
-    end)
-end)
-
-vim.keymap.set("i", "<c-x><c-s>", function ()
-    care.api.complete(function (name)
-        return name == "cmp_spell"
-    end)
-end)
-
-vim.api.nvim_create_augroup("AutoComplete", { clear = true })
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = "AutoComplete",
-    callback = function ()
-        local function is_right_to_dot()
-            local col = vim.fn.col(".") - 1
-            if col == 0 then
-                return false
-            end
-            local char_left = vim.fn.getline("."):sub(col, col)
-            return char_left == "."
-        end
-        if is_right_to_dot() then
-            care.api.complete()
-        end
-    end,
-})

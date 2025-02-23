@@ -30,8 +30,6 @@
     plugins-resession-telescope-nvim.flake = false;
     plugins-nvim-cmp-buffer.url = "github:hrsh7th/cmp-buffer";
     plugins-nvim-cmp-buffer.flake = false;
-    plugins-nvim-cmp-path.url = "github:hrsh7th/cmp-path";
-    plugins-nvim-cmp-path.flake = false;
     plugins-nvim-cmp-spell.url = "github:f3fora/cmp-spell";
     plugins-nvim-cmp-spell.flake = false;
     plugins-helpview-nvim.url = "github:OXY2DEV/helpview.nvim";
@@ -120,7 +118,6 @@
           pkgs.vimPlugins.care-nvim
           care-cmp
           nvim-cmp-buffer
-          nvim-cmp-path
           nvim-cmp-spell
         ];
       };

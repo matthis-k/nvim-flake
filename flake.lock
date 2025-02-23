@@ -513,22 +513,6 @@
         "type": "github"
       }
     },
-    "plugins-nvim-cmp-path": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1664784283,
-        "narHash": "sha256-thppiiV3wjIaZnAXmsh7j3DUc6ceSCvGzviwFUnoPaI=",
-        "owner": "hrsh7th",
-        "repo": "cmp-path",
-        "rev": "91ff86cd9c29299a64f968ebb45846c485725f23",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hrsh7th",
-        "repo": "cmp-path",
-        "type": "github"
-      }
-    },
     "plugins-nvim-cmp-spell": {
       "flake": false,
       "locked": {
@@ -656,7 +640,6 @@
         "plugins-lz-n": "plugins-lz-n",
         "plugins-markview-nvim": "plugins-markview-nvim",
         "plugins-nvim-cmp-buffer": "plugins-nvim-cmp-buffer",
-        "plugins-nvim-cmp-path": "plugins-nvim-cmp-path",
         "plugins-nvim-cmp-spell": "plugins-nvim-cmp-spell",
         "plugins-nvim-lspconfig": "plugins-nvim-lspconfig",
         "plugins-plenary-nvim": "plugins-plenary-nvim",
