@@ -417,6 +417,22 @@
         "type": "github"
       }
     },
+    "plugins-conform-nvim": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739657764,
+        "narHash": "sha256-H9JLiRtixDKDN50SH6gkqgjlhLzHMAaOT1pc69ZFdco=",
+        "owner": "stevearc",
+        "repo": "conform.nvim",
+        "rev": "a6f5bdb78caa305496357d17e962bbc4c0b392e2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stevearc",
+        "repo": "conform.nvim",
+        "type": "github"
+      }
+    },
     "plugins-gitsigns-nvim": {
       "flake": false,
       "locked": {
@@ -634,6 +650,7 @@
         "nixpkgs": "nixpkgs_3",
         "plugins-base16-nvim": "plugins-base16-nvim",
         "plugins-care-cmp": "plugins-care-cmp",
+        "plugins-conform-nvim": "plugins-conform-nvim",
         "plugins-gitsigns-nvim": "plugins-gitsigns-nvim",
         "plugins-helpview-nvim": "plugins-helpview-nvim",
         "plugins-lazydev-nvim": "plugins-lazydev-nvim",

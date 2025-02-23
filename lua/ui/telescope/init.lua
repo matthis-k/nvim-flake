@@ -21,6 +21,8 @@ require("lz.n").load({
     cmd = { "Telescope" },
     after = function ()
         local telescope = require("telescope")
+        local border = require("constants").wins.border
+        border = vim.iter({ 2, 4, 6, 8, 1, 3, 5, 7 }):map(function (idx) return border[idx] end):totable()
 
         local extensions = {}
 
@@ -33,10 +35,18 @@ require("lz.n").load({
 
         telescope.setup({
             defaults = {
-                mappings = {
-                    i = {
-                        ["<C-h>"] = "which_key",
-                    },
+                border = true,
+                theme = "center",
+                layout_config = { horizontal = { prompt_position = "top", preview_width = 0.5 } },
+                layout_strategy = "horizontal",
+                prompt_prefix = " ",
+                selection_caret = " ",
+                sorting_strategy = "ascending",
+                winblend = 0,
+                borderchars = {
+                    prompt = border,
+                    results = border,
+                    preview = border,
                 },
             },
             pickers = {},

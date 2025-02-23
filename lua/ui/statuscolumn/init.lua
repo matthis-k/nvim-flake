@@ -85,12 +85,12 @@ function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
     vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
 end
 
-local number_column = {
-    cache = function (lcache, shared)
+local number_column = Part()
+    :cache(function (lcache, shared)
         lcache.is_focused = shared.win == vim.api.nvim_get_current_win()
         lcache.show_relative = is_focused and vim.wo[shared.win].relativenumber
-    end,
-    text = function (lcache, shared)
+    end)
+    :text(function (lcache, shared)
         text = string.rep(" ", cache.numberwidth or 0)
         if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
             local number
@@ -106,19 +106,18 @@ local number_column = {
             end
         end
         return text
-    end,
-    hl = function (lcache, shared)
+    end)
+    :hl(function (lcache, shared)
         if vim.v.relnum == 0 and vim.wo[shared.win].relativenumber then
             return "StcCurrentLineNumber"
         else
             return "StcLineNumber"
         end
-    end,
-    on_click = "v:lua.click_handlers.click_line",
-}
+    end)
+    :on_click("v:lua.click_handlers.click_line")
 
-local fold_column = {
-    cache = function (lcache, shared)
+local fold_column = Part()
+    :cache(function (lcache, shared)
         if (not cache) or (not cache.folds) then return end
         local symbol = ""
         local hl = "StcFold"
@@ -153,18 +152,20 @@ local fold_column = {
         end
         lcache.text = symbol
         lcache.hl = hl
-    end,
-    text = function (lcache, shared)
+    end)
+    :text(function (lcache, shared)
         return lcache.text
-    end,
-    hl = function (lcache, shared)
+    end)
+    :hl(function (lcache, shared)
         return lcache.hl
-    end,
-}
+    end)
 
-local function signs()
-    return {
-        cache = function (lcache, shared)
+local function signs(opts)
+    return Part()
+        :cache(function (lcache, shared)
+            for k, v in pairs(opts) do
+                lcache[k] = v
+            end
             local width = lcache.width or 2
             local hide_empty = lcache.hide_empty or false
             local fill_char = lcache.fill_char or " "
@@ -198,33 +199,30 @@ local function signs()
             end
             lcache.text = text
             lcache.hl = extmark[4].sign_hl_group
-        end,
-        text = function (lcache, shared)
+        end)
+        :text(function (lcache, shared)
             return lcache.text
-        end,
-        hl = function (lcache, shared)
+        end)
+        :hl(function (lcache, shared)
             return lcache.hl
-        end,
-    }
+        end)
 end
 
 local stc = Part():cache(function (_, shared) shared.win = vim.g.statusline_winid end):children({
-    Part(signs):cache_prepend(function (lcache, _)
-        lcache.filter = function (name)
+    signs({
+        filter = function (name)
             return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
                 or name:match("gitsigns_signs.*"))
-        end
-        lcache.hide_empty = true
-    end),
-    Part(signs):cache_prepend(function (lcache, _)
-        lcache.filter = function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end
-    end),
-    Part(fold_column),
-    Part(number_column),
-    Part(signs):cache_prepend(function (lcache, _)
-        lcache.filter = function (name) return name:match("gitsigns_signs_.*") end
-        lcache.width = 1
-    end),
+        end,
+        hide_empty = true,
+    }),
+    signs({ filter = function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end }),
+    fold_column,
+    number_column,
+    signs({
+        filter = function (name) return name:match("gitsigns_signs_.*") end,
+        width = 1,
+    }),
 })
 
 ---Defines my status column

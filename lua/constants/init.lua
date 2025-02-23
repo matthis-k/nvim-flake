@@ -7,4 +7,7 @@ return {
             [vim.diagnostic.severity.INFO] = { name = "DiagnosticSignInfo", text = "", texthl = "DiagnosticInfo" },
         },
     },
+    wins = {
+        border = { "🭽", "▔", "🭾", "▕", "🭿", "▁", "🭼", "▏" },
+    },
 }

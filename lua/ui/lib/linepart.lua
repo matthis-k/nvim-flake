@@ -1,16 +1,16 @@
-_G.click_handlers = {}
+_G.click_handlers = _G.click_handlers or {}
 local EMPTY = ""
 ---@class PartData
----@field hl? string|fun(cache:table, shared:table):string?
----@field text? string|fun(cache:table, shared:table):string?
----@field on_click? string|fun(cache:table, shared:table):string?
----@field on_click_param? string|fun(cache:table, shared:table):string?
----@field children? Part[]|fun(cache:table, shared:table):Part[]?
----@field child_sep? Part|fun(cache:table, shared:table):Part?
----@field before? Part|fun(cache:table, shared:table):Part?
----@field after? Part|fun(cache:table, shared:table):Part?
----@field opts? PartDataOpts|fun(cache:table, shared:table):PartDataOpts?
----@field cache? fun(local:table,shared:table)
+---@field hl? string|fun(lcache:table, shared:table):string?
+---@field text? string|fun(lcache:table, shared:table):string?
+---@field on_click? string|fun(lcache:table, shared:table):string?
+---@field on_click_param? string|fun(lcache:table, shared:table):string?
+---@field children? Part[]|fun(lcache:table, shared:table):Part[]?
+---@field child_sep? Part|fun(lcache:table, shared:table):Part?
+---@field before? Part|fun(lcache:table, shared:table):Part?
+---@field after? Part|fun(lcache:table, shared:table):Part?
+---@field opts? PartDataOpts|fun(lcache:table, shared:table):PartDataOpts?
+---@field cache? fun(lcache:table, shared:table)
 
 ---@class PartDataOpts
 ---@field smart_before_after? boolean|fun(self:Part?):boolean
@@ -20,111 +20,98 @@ local EMPTY = ""
 ---@field data PartData
 local Part = {}
 setmetatable(Part, {
+    ---Construct a Part
+    ---@param _ any
+    ---@param args string|fun():Part|PartData
+    ---@return Part
     __call = function (_, args)
-        local data = type(args) == "string" and { text = args }
-            or type(args) == "function" and args()
-            or args
-            or {}
+        local data =
+            type(args) == "string" and { text = args } or
+            type(args) == "function" and args() or
+            type(args) == "table" and args or {}
         return setmetatable({ data = data }, Part)
     end,
 })
 Part.__index = Part
 
---- Sets the children field.
----@param children Part[]|fun(...:any):Part[]
+---@param children Part[]|fun(lcache:table, shared:table):Part[]?
 ---@return Part
 function Part:children(children)
     self.data.children = children
     return self
 end
 
---- Sets the hl field.
----@param hl string|fun(...:any):string
+---@param hl string|fun(lcache:table, shared:table):string?
 ---@return Part
 function Part:hl(hl)
     self.data.hl = hl
     return self
 end
 
--- Additional builder methods can be defined similarly:
-
---- Sets the text field.
----@param text string|fun(...:any):string
+---@param text string|fun(lcache:table, shared:table):string?
 ---@return Part
 function Part:text(text)
     self.data.text = text
     return self
 end
 
---- Sets the on_click field.
----@param on_click string|fun(...:any):string
+---@param on_click string|fun(lcache:table, shared:table):string?
+---@param param? string|fun(lcache:table, shared:table):string?
 ---@return Part
-function Part:on_click(on_click)
+function Part:on_click(on_click, param)
     self.data.on_click = on_click
+    if param then
+        self.data.on_click_param = param
+    end
     return self
 end
 
---- Sets the on_click_param field.
----@param on_click_param string|fun(...:any):string
----@return Part
-function Part:on_click_param(on_click_param)
-    self.data.on_click_param = on_click_param
-    return self
-end
-
---- Sets the child_sep field.
----@param child_sep string|Part|fun(...:any):Part
+---@param child_sep string|Part|fun(lcache:table, shared:table):Part?
 ---@return Part
 function Part:child_sep(child_sep)
     self.data.child_sep = type(child_sep) == "string" and Part(child_sep) or child_sep
     return self
 end
 
---- Sets the before field.
----@param before string|Part|fun(...:any):Part
+---@param before string|Part|fun(lcache:table, shared:table):Part?
 ---@return Part
 function Part:before(before)
     self.data.before = type(before) == "string" and Part(before) or before
     return self
 end
 
---- Sets the after field.
----@param after string|Part|fun(...:any):Part
+---@param after string|Part|fun(lcache:table, shared:table):Part?
 ---@return Part
 function Part:after(after)
     self.data.after = type(after) == "string" and Part(after) or after
     return self
 end
 
---- Sets the cache field.
----@param cache fun(lcache:table, shared: table)
+---@param cache fun(lcache:table, shared:table)
 ---@return Part
 function Part:cache(cache)
     self.data.cache = cache
     return self
 end
 
---- Sets the cache field.
----@param cache fun(lcache:table, shared: table)
+---@param cache fun(lcache:table, shared:table)
 ---@return Part
-function Part:cache_append(cache)
+function Part:append_cache(cache)
     local old_cache = self.data.cache
     self.data.cache = function (lcache, shared)
-        if old_cache then
-            old_cache(lcache, shared)
-        end
+        if old_cache then old_cache(lcache, shared) end
         cache(lcache, shared)
     end
     return self
 end
 
-function Part:cache_prepend(cache)
+---@param cache fun(lcache:table, shared:table)
+---@return Part
+function Part:prepend_cache(cache)
     local old_cache = self.data.cache
     self.data.cache = function (lcache, shared)
         cache(lcache, shared)
-        if old_cache then
-            old_cache(lcache, shared)
-        end
+        if old_cache then old_cache(lcache, shared) end
     end
     return self
 end
@@ -138,38 +125,41 @@ function Part:init_caches(local_cache, shared_cache)
     init_cache(self)
     init_cache(self.data.before)
     if self.data.children then
-        local children = type(self.data.children) == "function" and (self.data.children(local_cache, shared_cache) or {}) or self.data.children
+        local children = type(self.data.children) == "function" and (self.data.children(local_cache, shared_cache) or {}) or
+            self.data.children
         if children and #children > 0 then
             init_cache(self.data.child_sep)
-            vim.iter(children):each(init_cache)
+            for _, child in ipairs(children) do
+                init_cache(child)
+            end
         end
     end
     init_cache(self.data.after)
 end
 
---- Evaluates the Part and returns a string.
---- @return string
 function Part:eval(shared_cache)
     local data = self.data or {}
-    opts = type(data.opts) == "function" and data.opts() or data.opts or {}
+    local opts = type(data.opts) == "function" and data.opts() or data.opts or {}
     local ignore_empty_child = opts.ignore_empty_child ~= nil and opts.ignore_empty_child or true
     local smart_before_after = opts.smart_before_after ~= nil and opts.smart_before_after or true
 
-
     local local_cache = {}
-    local shared_cache = shared_cache or {}
+    shared_cache = shared_cache or {}
     self:init_caches(local_cache, shared_cache)
 
     local function eval_value(val)
         if type(val) == "function" then
             return val(local_cache, shared_cache)
-        elseif type(val) == "table" and val.eval then
-            return val:eval(shared_cache) or EMPTY
+        elseif type(val) == "table" then
+            if val.eval then
+                return val:eval(shared_cache) or EMPTY
+            else
+                return Part(val):eval(shared_cache) or EMPTY
+            end
         else
             return val or EMPTY
         end
     end
-
 
     local hl = eval_value(data.hl) or EMPTY
     local text_val = eval_value(data.text) or EMPTY
@@ -179,27 +169,22 @@ function Part:eval(shared_cache)
     local on_click_param = eval_value(data.on_click_param) or EMPTY
 
     local res = {}
-    res.hl = #hl > 0 and string.format("%%#%s#", hl) or EMPTY
+    res.hl = (#hl > 0) and string.format("%%#%s#", hl) or EMPTY
 
-    -- Process children: evaluate each child and optionally ignore empty results.
     res.children_str = EMPTY
     if data.children then
-        local children = type(data.children) == "function" and (data.children(local_cache, shared_cache) or {} or {}) or data.children
+        local children = type(data.children) == "function" and (data.children(local_cache, shared_cache) or {}) or
+            data.children
         if children and #children > 0 then
-            local sep = EMPTY
-            if data.child_sep then
-                sep = eval_value(data.child_sep)
+            local sep = data.child_sep and eval_value(data.child_sep) or EMPTY
+            local child_strs = {}
+            for _, child in ipairs(children) do
+                local child_eval = eval_value(child)
+                if #child_eval > 0 then
+                    child_eval = child_eval .. res.hl
+                    table.insert(child_strs, child_eval)
+                end
             end
-            local child_strs = vim.iter(children)
-                :map(function (child)
-                    child_eval = eval_value(child)
-                    if #child_eval > 0 then
-                        child_eval = child_eval .. res.hl
-                    end
-                    return child_eval
-                end)
-                :filter(function (s) return #s > 0 end)
-                :totable()
             if #child_strs > 0 then
                 res.children_str = table.concat(child_strs, sep)
             end
@@ -220,7 +205,6 @@ function Part:eval(shared_cache)
         end
         res.click_suffix = "%T"
     end
-
 
     if #res.own_content > 0 then
         return res.click_prefix .. res.hl .. res.before .. res.own_content .. res.after .. res.click_suffix

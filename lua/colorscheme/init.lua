@@ -1,1 +1,1 @@
-vim.cmd("colorscheme base16-catppuccin-mocha")
+require("base16-colorscheme").setup("catppuccin-mocha",{ telescope_borders = true })

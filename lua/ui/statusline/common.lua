@@ -41,24 +41,20 @@ local modes = {
     ["nt"] = { text = "T-NORMAL", hl = "StlModeTerminalNormal" },
 }
 
-M.mode = {
-    cache = function (cache, shared)
+M.mode = Part()
+    :cache(function (cache, shared)
         for k, v in pairs(modes[vim.api.nvim_get_mode().mode] or { text = "UNKOWN", hl = "StlModeNormal" }) do
             cache[k] = v
         end
         shared.mode_hl = cache.hl
-    end,
-    text = function (cache)
-        return cache.text
-    end,
-    hl = function (cache)
-        return cache.hl
-    end,
-}
+    end)
+    :text(function (cache) return cache.text end)
+    :hl(function (_, shared) return shared.mode_hl end)
+    :before(" "):after(" ")
 
-M.filename = {
-    hl = "StlSectionB",
-    text = function ()
+M.filename = Part()
+    :hl("StlSectionB")
+    :text(function ()
         local file = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":.")
         local dir = vim.fn.fnamemodify(file, ":h")
         if file == "" then
@@ -79,31 +75,28 @@ M.filename = {
             end
         end
         return file
-    end,
-}
+    end)
 
-M.modified = {
-    cache = function (lcache, shared)
+M.modified = Part()
+    :cache(function (lcache, shared)
         lcache.buf = vim.api.nvim_get_current_buf()
-    end,
-    text = function (lcache, shared)
+    end)
+    :text(function (lcache, shared)
         if vim.bo[lcache.buf].modified then
             return "modified"
         end
-    end,
-}
+    end)
 
-M.readonly = {
-    cache = function (lcache, shared)
+M.readonly = Part()
+    :cache(function (lcache, shared)
         lcache.buf = vim.api.nvim_get_current_buf()
-    end,
-    hl = "@error",
-    text = function (lcache, shared)
+    end)
+    :hl("@error")
+    :text(function (lcache, shared)
         if vim.bo[lcache.buf].readonly then
             return "readonly"
         end
-    end,
-}
+    end)
 
 M.diagnostics = {
     get_text = function (severity)
@@ -118,50 +111,42 @@ M.diagnostics = {
     end,
 }
 
-M.diagnostics.errors = {
-    hl = vim.fn.sign_getdefined("DiagnosticSignError")[1].texthl,
-    text = M.diagnostics.get_text(vim.diagnostic.severity.ERROR),
-}
-M.diagnostics.warnings = {
-    hl = vim.fn.sign_getdefined("DiagnosticSignWarn")[1].texthl,
-    text = M.diagnostics.get_text(vim.diagnostic.severity.WARN),
-}
-M.diagnostics.info = {
-    hl = vim.fn.sign_getdefined("DiagnosticSignInfo")[1].texthl,
-    text = M.diagnostics.get_text(vim.diagnostic.severity.INFO),
-}
-M.diagnostics.hint = {
-    hl = vim.fn.sign_getdefined("DiagnosticSignHint")[1].texthl,
-    text = M.diagnostics.get_text(vim.diagnostic.severity.HINT),
-}
-M.diagnostics.all = {
-    children = {
-        Part(M.diagnostics.errors),
-        Part(M.diagnostics.warnings),
-        Part(M.diagnostics.info),
-        Part(M.diagnostics.hints),
-    },
-    child_sep = Part(" "),
-}
+M.diagnostics.errors = Part()
+    :hl(vim.fn.sign_getdefined("DiagnosticSignError")[1].texthl)
+    :text(M.diagnostics.get_text(vim.diagnostic.severity.ERROR))
+M.diagnostics.warnings = Part()
+    :hl(vim.fn.sign_getdefined("DiagnosticSignWarn")[1].texthl)
+    :text(M.diagnostics.get_text(vim.diagnostic.severity.WARN))
+M.diagnostics.info = Part()
+    :hl(vim.fn.sign_getdefined("DiagnosticSignInfo")[1].texthl)
+    :text(M.diagnostics.get_text(vim.diagnostic.severity.INFO))
+M.diagnostics.hint = Part()
+    :hl(vim.fn.sign_getdefined("DiagnosticSignHint")[1].texthl)
+    :text(M.diagnostics.get_text(vim.diagnostic.severity.HINT))
+M.diagnostics.all = Part()
+    :children({
+        M.diagnostics.errors,
+        M.diagnostics.warnings,
+        M.diagnostics.info,
+        M.diagnostics.hints,
+    })
+    :child_sep(" ")
 
-M.pos = {
-    text = function ()
+M.pos = Part()
+    :text(function ()
         local line = vim.fn.line(".")
         local col = vim.fn.col(".")
         return string.format("%03d:%02d", line, col)
-    end,
-}
+    end)
 
-M.encoding = {
-    text = function ()
+M.encoding = Part()
+    :text(function ()
         return string.format("%s", vim.bo.fileencoding or "utf-8")
-    end,
-}
+    end)
 
-M.filetype = {
-    text = function ()
+M.filetype = Part()
+    :text(function ()
         return string.format("%s", vim.bo.filetype or "none")
-    end,
-}
+    end)
 
 return M

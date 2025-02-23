@@ -3,6 +3,82 @@ if not nixCats("lsp.enabled") then
 end
 
 require("lz.n").load({
+    "conform-nvim",
+    event = { "BufWritePre" },
+    cmd = { "ConformInfo", "FormatOff", "FormatOn" },
+    keys = {
+        {
+            "<leader>vf",
+            "<cmd>FormatOn<cr>",
+            mode = "n",
+            silent = true,
+            desc = "Re-enable autoformat-on-save",
+        },
+        {
+            "<leader>vF",
+            "<cmd>FormatOff<cr>",
+            mode = "n",
+            silent = true,
+            desc = "Disable autoformat-on-save",
+        },
+        {
+            "<leader>lf",
+            function ()
+                require("conform").format({ async = true })
+            end,
+            mode = "n",
+            silent = true,
+            desc = "Format buffer",
+        },
+        {
+            "<space>lf",
+            function ()
+                require("conform").format({
+                    async = true,
+                    range = {
+                        start = vim.api.nvim_buf_get_mark(0, "<"),
+                        ["end"] = vim.api.nvim_buf_get_mark(0, ">"),
+                    },
+                })
+            end,
+            mode = "v",
+            silent = true,
+            desc = "Format range",
+        },
+    },
+    after = function ()
+        require("conform").setup({
+            default_format_opts = {
+                lsp_format = "prefer",
+            },
+            format_on_save = function (bufnr)
+                if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+                    return
+                end
+                return { timeout_ms = 500 }
+            end,
+        })
+
+        vim.api.nvim_create_user_command("FormatOff", function (args)
+            if args.bang then
+                vim.b.disable_autoformat = true
+            else
+                vim.g.disable_autoformat = true
+            end
+        end, {
+            desc = "Disable autoformat-on-save",
+            bang = true,
+        })
+        vim.api.nvim_create_user_command("FormatOn", function ()
+            vim.b.disable_autoformat = false
+            vim.g.disable_autoformat = false
+        end, {
+            desc = "Re-enable autoformat-on-save",
+        })
+    end,
+})
+
+require("lz.n").load({
     "lazydev-nvim",
     cmd = "LazyDev",
     ft = "lua",
@@ -74,14 +150,6 @@ local capability_keymap_table = {
         { "n", "gd", vim.lsp.buf.definition, { silent = true, desc = "Go to definition" } },
     },
     ["textDocument/formatting"] = {
-        {
-            "n",
-            "<space>lf",
-            function ()
-                vim.lsp.buf.format({ async = true })
-            end,
-            { silent = true, desc = "Format" },
-        },
     },
     ["textDocument/hover"] = {
         { "n", "K", vim.lsp.buf.hover, { silent = true, desc = "Show hover information" } },
@@ -93,14 +161,6 @@ local capability_keymap_table = {
         { "n", "<space>li", toggle_inlay_hints, { silent = true, desc = "Toggle inlay hints" } },
     },
     ["textDocument/rangeFormatting"] = {
-        {
-            "v",
-            "<space>lf",
-            function ()
-                vim.lsp.buf.range_format({ async = true })
-            end,
-            { silent = true, desc = "Format range" },
-        },
     },
     ["textDocument/references"] = {
         { "n", "gr", "<cescope lsp_references<cr>", { silent = true, desc = "Find references" } },

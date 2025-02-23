@@ -70,57 +70,55 @@ vim.api.nvim_create_autocmd("BufReadPost", {
 
 
 -- Git branch: shows the current branch name.
-M.branch = {
-    hl = "StlGitBranch",
-    text = function ()
+M.branch = Part()
+    :hl("StlGitBranch")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status then return "" end
         return git_status.head or ""
-    end,
-}
+    end)
 
 M.status = {}
-M.status.added = {
-    hl = "StlGitAdded",
-    text = function ()
+M.status.added = Part()
+    :hl("StlGitAdded")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status or not (git_status.added and git_status.added > 0) then return "" end
         return string.format("+%d", git_status.added)
-    end,
-}
-M.status.changed = {
-    hl = "StlGitChanged",
-    text = function ()
+    end)
+
+M.status.changed = Part()
+    :hl("StlGitChanged")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status or not (git_status.changed and git_status.changed > 0) then return "" end
         return string.format("~%d", git_status.changed)
-    end,
-}
-M.status.removed = {
-    hl = "StlGitDeleted",
-    text = function ()
+    end)
+
+M.status.removed = Part()
+    :hl("StlGitDeleted")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status or not (git_status.removed and git_status.removed > 0) then return "" end
         return string.format("-%d", git_status.removed)
-    end,
-}
-M.status.all = {
-    children = {
-        Part(M.status.added),
-        Part(M.status.changed),
-        Part(M.status.removed),
-    },
-}
+    end)
+
+M.status.all = Part()
+    :children({
+        M.status.added,
+        M.status.changed,
+        M.status.removed,
+    })
 
 -- Git remote: shows ahead/behind counts and a check mark when in sync.
 M.remote = {}
-M.remote.ahead = {
-    hl = "StlGitRemoteAhead",
-    text = function ()
+M.remote.ahead = Part()
+    :hl("StlGitRemoteAhead")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status then return "" end
@@ -128,11 +126,11 @@ M.remote.ahead = {
         local remote = M.cache[git_status.root]
         if remote.error or not (remote.ahead and remote.ahead > 0) then return "" end
         return string.format("↑%d", remote.ahead)
-    end,
-}
-M.remote.behind = {
-    hl = "StlGitRemoteBehind",
-    text = function ()
+    end)
+
+M.remote.behind = Part()
+    :hl("StlGitRemoteBehind")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status then return "" end
@@ -140,11 +138,11 @@ M.remote.behind = {
         local remote = M.cache[git_status.root]
         if remote.error or not (remote.behind and remote.behind > 0) then return "" end
         return string.format("↓%d", remote.behind)
-    end,
-}
-M.remote.up_to_date = {
-    hl = "StlGitBranch",
-    text = function ()
+    end)
+
+M.remote.up_to_date = Part()
+    :hl("StlGitBranch")
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status then return "" end
@@ -155,36 +153,33 @@ M.remote.up_to_date = {
             return "✓"
         end
         return ""
-    end,
-}
-M.remote.all = {
-    children = {
-        Part(M.remote.ahead),
-        Part(M.remote.behind),
-        Part(M.remote.up_to_date),
-    },
-}
+    end)
+
+M.remote.all = Part()
+    :children({
+        M.remote.ahead,
+        M.remote.behind,
+        M.remote.up_to_date,
+    })
 
 -- Git icon: a static icon.
-M.icon = {
-    text = function ()
+M.icon = Part()
+    :text(function ()
         local bufnr = vim.api.nvim_get_current_buf()
         local git_status = vim.b[bufnr].gitsigns_status_dict
         if not git_status then return "" end
         return ""
-    end,
-    hl = "StlGitBranch",
-}
+    end)
+    :hl("StlGitBranch")
 
 -- All git parts combined.
-M.all = {
-    children = {
-        Part(M.icon),
-        Part(M.branch),
-        Part(M.remote.all),
-        Part(M.status.all),
-    },
-    child_sep = Part(" "),
-}
+M.all = Part()
+    :children({
+        M.icon,
+        M.branch,
+        M.remote.all,
+        M.status.all,
+    })
+    :child_sep(" ")
 
 return M

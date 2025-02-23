@@ -77,124 +77,117 @@ function M.buffer(buf)
         return sign
     end
 
-    local diagnostics = function (lcache, shared)
-        local signs = {
-            error = get_sign("DiagnosticSignError", "E", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticError"),
-            warn = get_sign("DiagnosticSignWarn", "W", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticWarn"),
-            info = get_sign("DiagnosticSignInfo", "I", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticInfo"),
-            hint = get_sign("DiagnosticSignHint", "H", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticHint"),
-        }
-        local diagnostics = {}
-        if errors > 0 then
-            table.insert(diagnostics,
-                Part(string.format("%d %s", errors, utils.utf8sub(signs.error.text, 1, 1))):hl(signs.error.texthl)
-            )
-        end
-        if warnings > 0 then
-            table.insert(diagnostics,
-                Part(string.format("%d %s", warnings, utils.utf8sub(signs.warn.text, 1, 1))):hl(signs.warn.texthl))
-        end
-        if infos > 0 then
-            table.insert(diagnostics,
-                Part(string.format("%d %s", infos, utils.utf8sub(signs.info.text, 1, 1))):hl(signs.info.texthl))
-        end
-        if hints > 0 then
-            table.insert(diagnostics,
-                Part(string.format("%d %s", hints, utils.utf8sub(signs.hint.text, 1, 1))):hl(signs.hint.texthl))
-        end
-        return diagnostics
-    end
-
-
-    local label = Part():children({ filename }):hl(function (lcache, shared)
-            return string.format("Tbl%sFilename", shared.buf_cur_str[buf])
-        end)
-        :on_click("v:lua.click_handlers.click_buffer")
-        :on_click_param(buf)
-
-    local close_button = Part("󰖭"):before(" "):after(" "):hl(function (lcache, shared)
-            return string.format(
-                "Tbl%sCloseButton", shared.buf_cur_str[buf])
-        end)
-        :on_click("v:lua.click_handlers.click_close_buffer")
-        :on_click_param(buf)
-
     return Part():cache(function (lcache, shared)
             shared.buf_cur_str = shared.buf_cur_str or {}
             shared.buf_cur_str[buf] = (vim.api.nvim_get_current_buf() == buf) and "Current" or ""
         end)
-        :children({ label, Part():children(diagnostics):child_sep(" "):before(" "), close_button })
+        :children({ Part():text(filename):hl(function (lcache, shared)
+            return string.format("Tbl%sFilename", shared.buf_cur_str[buf])
+        end),
+            Part():children(
+                function (lcache, shared)
+                    local signs = {
+                        error = get_sign("DiagnosticSignError", "E",
+                            "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticError"),
+                        warn = get_sign("DiagnosticSignWarn", "W", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticWarn"),
+                        info = get_sign("DiagnosticSignInfo", "I", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticInfo"),
+                        hint = get_sign("DiagnosticSignHint", "H", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticHint"),
+                    }
+                    local diagnostics = {}
+                    if errors > 0 then
+                        table.insert(diagnostics,
+                            Part(string.format("%d %s", errors, utils.utf8sub(signs.error.text, 1, 1))):hl(signs.error
+                                .texthl)
+                        )
+                    end
+                    if warnings > 0 then
+                        table.insert(diagnostics,
+                            Part(string.format("%d %s", warnings, utils.utf8sub(signs.warn.text, 1, 1))):hl(signs.warn
+                                .texthl))
+                    end
+                    if infos > 0 then
+                        table.insert(diagnostics,
+                            Part(string.format("%d %s", infos, utils.utf8sub(signs.info.text, 1, 1))):hl(signs.info
+                                .texthl))
+                    end
+                    if hints > 0 then
+                        table.insert(diagnostics,
+                            Part(string.format("%d %s", hints, utils.utf8sub(signs.hint.text, 1, 1))):hl(signs.hint
+                                .texthl))
+                    end
+                    return diagnostics
+                end
+            ):child_sep(" "):before(" "),
+            Part("󰖭"):before(" "):after(" "):hl(function (lcache, shared)
+                return string.format(
+                    "Tbl%sCloseButton", shared.buf_cur_str[buf])
+            end)
+                :on_click("v:lua.click_handlers.click_close_buffer", buf) })
         :before(" ")
         :hl(function (lcache, shared) return string.format("Tbl%sBuffer", shared.buf_cur_str[buf]) end)
 end
 
-function M.buffers()
-    local children = function (lcache, shared)
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(0)
-        local buffers = vim.api.nvim_list_bufs()
-        local children = {}
-        for _, buf in ipairs(buffers) do
-            if vim.fn.buflisted(buf) ~= 0 then
-                table.insert(children, M.buffer(buf))
+local mode = require("ui.statusline.common").mode
+M.buffers = Part():hl("TblSectionC"):children({
+        Part("Buffers"):cache(mode.data.cache):hl(mode.data.hl):before(" "):after(" "),
+        Part():hl("TblSectionC"):children(function (lcache, shared)
+            local tabpage_wins = vim.api.nvim_tabpage_list_wins(0)
+            local buffers = vim.api.nvim_list_bufs()
+            local children = {}
+            for _, buf in ipairs(buffers) do
+                if vim.fn.buflisted(buf) ~= 0 then
+                    table.insert(children, M.buffer(buf))
+                end
             end
+            return children
         end
-        return children
-    end
-    local mode = require("ui.statusline.common").mode
-    return Part():hl("TblSectionC"):children({
-        Part("Buffers"):cache(mode.cache):hl(mode.hl):before(" "):after(" "),
-        Part():hl("TblSectionC"):children(children):child_sep(" "),
+        ):child_sep(" "),
     })
-end
 
 function M.tab(tabpage)
-    local label = Part(tostring(tabpage))
-        :hl(function (_, shared)
-            return string.format("Tbl%stab", shared.tabpage_cur_str)
-        end)
-        :on_click("v:lua.click_handlers.click_tab")
-        :on_click_param(tabpage)
-
-    local close_button = Part("󰖭")
-        :before(" "):after(" ")
-        :hl(function (_, shared)
-            return string.format("Tbl%sTabCloseButton", shared.tabpage_cur_str)
-        end)
-        :on_click("v:lua.click_handlers.click_close_tab")
-        :on_click_param(tabpage)
-
     return Part()
         :before(" ")
         :cache(function (_, shared)
             shared.tabpage_cur_str = (vim.fn.tabpagenr() == tabpage) and "Current" or ""
         end)
-        :children({ label, close_button }):hl(function (_, shared)
+        :children({
+            Part()
+                :text(tostring(tabpage))
+                :hl(function (_, shared)
+                    return string.format("Tbl%stab", shared.tabpage_cur_str)
+                end)
+                :on_click("v:lua.click_handlers.click_tab", tabpage),
+            Part("󰖭")
+                :before(" "):after(" ")
+                :hl(function (_, shared)
+                    return string.format("Tbl%sTabCloseButton", shared.tabpage_cur_str)
+                end)
+                :on_click("v:lua.click_handlers.click_close_tab", tabpage),
+        }):hl(function (_, shared)
             return string.format("Tbl%sTab", shared.tabpage_cur_str)
         end)
 end
 
-function M.tabs()
-    local children = function ()
-        local tabpages = vim.api.nvim_list_tabpages()
-        local children = {}
-        for _, tabpage in ipairs(tabpages) do
-            table.insert(children, M.tab(tabpage))
-        end
-        return children
-    end
-    local mode = require("ui.statusline.common").mode
-    return Part()
-        :children({
-            Part():after(" "):children(children):child_sep(" "):hl("TblSectionC"),
-            Part("Tabs"):cache(mode.cache):hl(mode.hl):before(" "):after(" "),
-        })
-        :hl("TblSectionC")
-end
+M.tabs = Part()
+    :children({
+        Part():after(" "):children(
+            function ()
+                local tabpages = vim.api.nvim_list_tabpages()
+                local children = {}
+                for _, tabpage in ipairs(tabpages) do
+                    table.insert(children, M.tab(tabpage))
+                end
+                return children
+            end
+        ):child_sep(" "):hl("TblSectionC"),
+        Part("Tabs"):cache(mode.data.cache):hl(mode.data.hl):before(" "):after(" "),
+    })
+    :hl("TblSectionC")
 
 local line = Part():hl("TblSectionC"):children({
-    M.buffers(),
+    M.buffers,
     Part("%="):hl("StlSectionC"),
-    M.tabs(),
+     M.tabs,
 })
 ---Creates tab line format string
 ---@return string

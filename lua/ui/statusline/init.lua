@@ -9,29 +9,25 @@ local stl = require("ui.statusline.common")
 local git = require("ui.statusline.git")
 
 local line = Part():children({
-    Part():hl(function (_, shared) return shared.mode_hl end):children({
-        Part(stl.mode):before(" "):after(" "),
-    }),
+    stl.mode,
     Part():hl("StlSectionB"):before(" "):after(" "):children({
-        Part(git.all),
-        Part(stl.filename),
+        git.all,
+        stl.filename,
         Part():hl("StlSectionB"):before("["):after("]"):children({
-            Part(stl.modified),
-            Part(stl.readonly),
+            stl.modified,
+            stl.readonly,
         }):child_sep(" "),
-        Part(stl.diagnostics),
+        stl.diagnostics,
     }):child_sep(" "),
-    Part():hl("StlSectionC"):children({
-    }),
-    Part():text("%="):hl("StlSectionC"),
+    Part("%="):hl("StlSectionC"),
     Part():hl("StlSectionB"):before(" "):after(" "):children({
-        Part(stl.filetype),
-        Part(stl.encoding),
+        stl.filetype,
+        stl.encoding,
     }):child_sep(" "),
     Part():hl(function (_, shared) return shared.mode_hl end):before(" "):after(" "):children({
-        Part(stl.pos),
+        stl.pos,
     }),
-})
+}):hl("StlSectionC")
 ---Creates status line format string
 ---@return string
 function StatusLine()
