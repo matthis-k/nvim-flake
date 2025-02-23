@@ -14,11 +14,11 @@ local line = Part():children({
     }),
     Part():hl("StlSectionB"):before(" "):after(" "):children({
         Part(git.all),
+        Part(stl.filename),
         Part():hl("StlSectionB"):before("["):after("]"):children({
             Part(stl.modified),
             Part(stl.readonly),
         }):child_sep(" "),
-        Part(stl.filename),
         Part(stl.diagnostics),
     }):child_sep(" "),
     Part():hl("StlSectionC"):children({
@@ -27,7 +27,7 @@ local line = Part():children({
     Part():hl("StlSectionB"):before(" "):after(" "):children({
         Part(stl.filetype),
         Part(stl.encoding),
-    }),
+    }):child_sep(" "),
     Part():hl(function (_, shared) return shared.mode_hl end):before(" "):after(" "):children({
         Part(stl.pos),
     }),

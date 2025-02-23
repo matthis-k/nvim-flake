@@ -86,7 +86,6 @@ M.modified = {
     cache = function (lcache, shared)
         lcache.buf = vim.api.nvim_get_current_buf()
     end,
-    hl = "Normal",
     text = function (lcache, shared)
         if vim.bo[lcache.buf].modified then
             return "modified"
