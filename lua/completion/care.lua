@@ -4,8 +4,8 @@ local labels = { "1", "2", "3", "4", "5", "6", "7", "8", "9" }
 care.setup({
     ui = {
         menu = {
-            max_height = 10,
-            border = "rounded",
+            max_height = vim.o.pumheight ~= 0 and vim.o.pumheight or 10,
+            border = require("constants").wins.border,
             position = "auto",
             format_entry = function (entry, data)
                 local preset_cmps = require("care.presets.components")
@@ -13,16 +13,18 @@ care.setup({
                     preset_cmps.KindIcon(entry, "fg"),
                     preset_cmps.Label(entry, data, false),
                     preset_cmps.KindName(entry, true),
+                    preset_cmps.ColoredBlock(entry),
+                    preset_cmps.Padding(1),
                 }
             end,
-            scrollbar = "█",
+            scrollbar = { enabled = true, character = require("constants").wins.scroller, offset = 0 },
             alignments = {},
         },
         docs_view = {
             max_height = 8,
             max_width = 80,
-            border = "rounded",
-            scrollbar = "█",
+            border = require("constants").wins.border,
+            scrollbar = { enabled = true, character = require("constants").wins.scroller, offset = 0 },
             position = "auto",
         },
         type_icons = {
