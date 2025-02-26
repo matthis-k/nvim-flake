@@ -233,7 +233,8 @@ function StatusColumn()
         return ""
     end
 
-    local first_line = vim.fn.line("w0", win)
+    local ok, first_line = pcall(vim.fn.line, "w0", win)
+    if not ok then return "" end
     local last_line = vim.fn.line("w$", win)
 
     if vim.v.lnum < first_line or last_line < vim.v.lnum then
