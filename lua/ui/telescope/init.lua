@@ -43,15 +43,21 @@ require("lz.n").load({
                 selection_caret = " ",
                 sorting_strategy = "ascending",
                 winblend = 0,
-                borderchars = {
-                    prompt = border,
-                    results = border,
-                    preview = border,
-                },
+                borderchars = border,
             },
             pickers = {},
             extensions = extensions,
         })
+
+        local themes = require("telescope.themes")
+        for key, value in pairs(themes) do
+            local original_theme = themes[key]
+            themes[key] = function (opts)
+                return original_theme(vim.tbl_deep_extend("keep", opts, { borderchars = border }))
+            end
+        end
+
+
         for ext_name, _ in pairs(extensions) do
             telescope.load_extension(ext_name)
         end
