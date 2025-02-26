@@ -15,7 +15,7 @@ local function init_cache(win)
     cache.last_line = vim.fn.line("w$", win)
     if vim.wo[win].relativenumber and not vim.wo[win].number then
         cache.numberwidth = math.max(3, vim.wo[win].numberwidth)
-    elseif vim.wo.number then
+    elseif vim.wo[win].number then
         cache.numberwidth = math.max(vim.wo[win].numberwidth, string.len(tostring(cache.last_line)) + 1)
     else
         cache.numberwidth = 0
@@ -91,7 +91,7 @@ local number_column = Part()
         lcache.show_relative = is_focused and vim.wo[shared.win].relativenumber
     end)
     :text(function (lcache, shared)
-        text = string.rep(" ", cache.numberwidth or 0)
+        local text = string.rep(" ", cache.numberwidth or 0)
         if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
             local number
             if vim.wo[shared.win].number and vim.wo[shared.win].relativenumber then
