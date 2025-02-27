@@ -54,7 +54,7 @@ function M.compose_hl(args)
             local base = vim.api.nvim_get_hl(0, { name = opts.fg, link = false }) or {}
             res.fg = base.fg
         end
-        opts.fg=nil
+        opts.fg = nil
     end
     if opts.bg and type(opts.bg) == "string" then
         local hexcode = opts.bg:match("#%x%x%x%x?%x?%x?%x?%x?")
@@ -64,7 +64,7 @@ function M.compose_hl(args)
             local base = vim.api.nvim_get_hl(0, { name = opts.bg, link = false }) or {}
             res.bg = base.bg
         end
-        opts.bg=nil
+        opts.bg = nil
     end
     if opts.sp and type(opts.sp) == "string" then
         local hexcode = opts.sp:match("#%x%x%x%x?%x?%x?%x?%x?")
@@ -74,7 +74,7 @@ function M.compose_hl(args)
             local base = vim.api.nvim_get_hl(0, { name = opts.sp, link = false }) or {}
             res.sp = base.sp
         end
-        opts.sp=nil
+        opts.sp = nil
     end
     if opts.reverse then
         local tmp = res.fg
@@ -84,6 +84,10 @@ function M.compose_hl(args)
     end
     ---@type  vim.api.keyset.highlight
     return vim.tbl_deep_extend("keep", res, opts)
+end
+
+function M.utf8len(str)
+    return #vim.str_utf_pos(str)
 end
 
 function M.utf8sub(str, start, stop)
