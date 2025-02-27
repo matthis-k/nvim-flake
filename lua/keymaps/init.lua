@@ -52,7 +52,7 @@ map("i", "<c-bs>", "<c-w>")
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 
-map("n", "<leader>e", function () require("tools.files").open() end, { desc = "File Explorer" })
+map("n", "<leader>e", function () require("tools.files.oil").open() end, { desc = "File Explorer" })
 
 map("n", "<leader>v", "<nop>", { desc = "Vim" })
 map("n", "<leader>vc", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <cr>", { desc = "Config" })
