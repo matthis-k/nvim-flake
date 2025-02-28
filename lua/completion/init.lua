@@ -5,6 +5,7 @@ end
 local constants = require("constants")
 
 require("blink.cmp").setup({
+    enabled = function () return vim.b.completion ~= false end,
     keymap = {
         ["<c-p>"] = { "select_prev", "fallback" },
         ["<c-n>"] = { "select_next", "fallback" },

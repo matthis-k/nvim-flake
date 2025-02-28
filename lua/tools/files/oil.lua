@@ -43,6 +43,7 @@ setmetatable(FileExplorer, {
         })
 
         vim.wo[instance.win].sidescrolloff = 0
+        vim.b[instance.buf].completion = false
 
         instance:render()
         instance:disable_keys({
