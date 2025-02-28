@@ -3,7 +3,7 @@ if not nixCats("lsp.enabled") then
 end
 
 require("lz.n").load({
-    "conform-nvim",
+    "conform.nvim",
     event = { "BufWritePre" },
     cmd = { "ConformInfo", "FormatOff", "FormatOn" },
     keys = {
@@ -79,7 +79,7 @@ require("lz.n").load({
 })
 
 require("lz.n").load({
-    "lazydev-nvim",
+    "lazydev.nvim",
     cmd = "LazyDev",
     ft = "lua",
     after = function ()

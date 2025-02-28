@@ -16,7 +16,7 @@ if nixCats("ui.telescope.resession") then
 end
 
 require("lz.n").load({
-    "telescope-nvim",
+    "telescope.nvim",
     keys = keys,
     cmd = { "Telescope" },
     after = function ()
