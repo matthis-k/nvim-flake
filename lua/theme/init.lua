@@ -2,7 +2,7 @@ local base16 = require("base16-colorscheme")
 base16.setup("catppuccin-mocha", { telescope_borders = true })
 
 local colors = base16.colors
-local hl = require("base16-colorscheme").highlight
+local hl = base16.highlight
 
 -- for blink.cmp to look clean
 hl.PMenuSel = { guifg = nil, guibg = colors.base02, gui = nil, guisp = nil, ctermfg = nil, ctermbg = colors.cterm02 }

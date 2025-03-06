@@ -55,7 +55,8 @@ map("v", ">", ">gv")
 map("n", "<leader>e", function () require("tools.files.oil").open() end, { desc = "File Explorer" })
 
 map("n", "<leader>v", "<nop>", { desc = "Vim" })
-map("n", "<leader>vc", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <cr>", { desc = "Config" })
+map("n", "<leader>vv", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <cr>", { desc = "Config" })
+map("n", "<leader>vc", require("theme.color_preview").toggle, { desc = "Toggle color preview" })
 
 map("n", "<leader>q", "<nop>", { desc = "Quickfix" })
 map("n", "<leader>qj", "<cmd>cnext<cr>", { desc = "Next Quickfix", silent = true })
