@@ -22,6 +22,13 @@ require("lz.n").load({
             desc = "Disable autoformat-on-save",
         },
         {
+            "<leader>l",
+            "<nop>",
+            mode = "n",
+            silent = true,
+            desc = "Lsp",
+        },
+        {
             "<leader>lf",
             function ()
                 require("conform").format({ async = true })
