@@ -9,6 +9,7 @@ setmetatable(FileExplorer, {
         dir = dir or vim.fn.getcwd()
         if not vim.fn.isdirectory(dir) then
             vim.notify(string.format("%s is not a directory", vim.inspect("str")), vim.log.levels.ERROR)
+            return
         end
         ---@type FileExplorer
         local instance = setmetatable({
@@ -17,18 +18,25 @@ setmetatable(FileExplorer, {
             row = 0,
             col = 0,
             show_hidden = false,
-            buf = vim.api.nvim_create_buf(false, true),
+            buf = nil,
             prev_win_id = vim.api.nvim_get_current_win(),
             width = 1,
             height = 1,
-            win = 0,
+            win = nil,
             entries = {},
             visible_entries = {},
             marked = {},
         }, FileExplorer)
 
+        local ok_buf, buf = pcall(vim.api.nvim_create_buf, false, true)
+        if not ok_buf or not buf then
+            vim.notify("Buffer creation failed: " .. tostring(buf), vim.log.levels.ERROR)
+            return nil
+        end
+        instance.buf = buf
 
-        instance.win = vim.api.nvim_open_win(instance.buf, true, {
+
+        local win_config = {
             relative = "tabline",
             anchor = "NW",
             width = instance.width,
@@ -40,12 +48,19 @@ setmetatable(FileExplorer, {
             border = border,
             title = instance.title,
             title_pos = "left",
-        })
+        }
+        local ok_win, win = pcall(vim.api.nvim_open_win, instance.buf, true, win_config)
+        if not ok_win or not win then
+            vim.notify("Window creation failed: " .. tostring(win), vim.log.levels.ERROR)
+            return nil
+        end
+        instance.win = win
 
         vim.wo[instance.win].sidescrolloff = 0
         vim.b[instance.buf].completion = false
 
         instance:render()
+
         instance:disable_keys({
             i = {
                 "<Up>", "<Down>", "<C-y>", "<C-e>", "<PageUp>", "<PageDown>",
@@ -146,8 +161,14 @@ function FileExplorer:toggle_hidden()
 end
 
 function FileExplorer:cd()
-    vim.cmd.cd(self.dir)
-    return notify(true, "Change working dictionary", self.dir, nil)
+    local ok, err = pcall(function ()
+        vim.cmd.cd(self.dir)
+    end)
+    if ok then
+        return notify(true, "Change working directory", self.dir, nil)
+    else
+        return notify(false, "Change working directory", self.dir, err)
+    end
 end
 
 function FileExplorer:set_dir(dir)
@@ -214,7 +235,7 @@ end
 
 function FileExplorer:get_selection(idx)
     local idx = idx or vim.api.nvim_win_get_cursor(self.win)[1]
-    local selected = self.visible_entries[idx] or self.visible_entries[1]
+    local selected = self.visible_entries[idx]
     if not selected then
         vim.notify("No entry selected", vim.log.levels.WARN)
         return {}
@@ -230,9 +251,14 @@ end
 
 function FileExplorer:open_file(selected)
     selected = selected or self:get_selection()
-    vim.api.nvim_win_call(self.prev_win_id, function ()
-        vim.cmd.edit(self.dir .. "/" .. selected.name)
+    local ok, err = pcall(function ()
+        vim.api.nvim_win_call(self.prev_win_id, function ()
+            vim.cmd.edit(self.dir .. "/" .. selected.name)
+        end)
     end)
+    if not ok then
+        vim.notify("Failed to open file: " .. tostring(err), vim.log.levels.ERROR)
+    end
 end
 
 local function notify(success, action, path, err)
@@ -291,7 +317,7 @@ function FileExplorer:rename()
         return vim.notify("No selection", vim.log.levels.ERROR)
     end
 
-    local orig_path = vim.fs.normalize(vim.fs.joinpath(self.dir, self:get_selection(sel.idx - 1).name))
+    local orig_path = vim.fs.normalize(vim.fs.joinpath(self.dir, sel.name))
     local new_name = vim.api.nvim_get_current_line()
     if new_name == "" then
         return vim.notify("No new name provided", vim.log.levels.ERROR)
@@ -353,7 +379,7 @@ function FileExplorer:render()
     self:show_data()
 
     if vim.api.nvim_win_is_valid(self.win) then
-        vim.api.nvim_win_set_config(self.win, {
+        local config = {
             relative = "tabline",
             anchor = "NW",
             width = self.width,
@@ -365,15 +391,18 @@ function FileExplorer:render()
             border = border,
             title = self.title,
             title_pos = "left",
-        })
+        }
+        local ok, err = pcall(vim.api.nvim_win_set_config, self.win, config)
+        if not ok then
+            vim.notify("Failed to update window config: " .. tostring(err), vim.log.levels.ERROR)
+        end
+        vim.api.nvim_win_call(self.win, function ()
+            local view = vim.fn.winsaveview()
+            view.topline = 1
+            view.leftcol = 0
+            vim.fn.winrestview(view)
+        end)
     end
-
-    vim.api.nvim_win_call(self.win, function ()
-        local view = vim.fn.winsaveview()
-        view.topline = 1
-        view.leftcol = 0
-        vim.fn.winrestview(view)
-    end)
 end
 
 M.open = FileExplorer
