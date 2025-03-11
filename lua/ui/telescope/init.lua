@@ -4,9 +4,11 @@ end
 local keys = {}
 if nixCats("ui.telescope.fileFinder") then
     table.insert(keys, { "<space><space>", "<cmd>Telescope find_files<cr>", desc = "Files" })
+    table.insert(keys, { "<space>e", "<cmd>Telescope file_browser<cr>", desc = "File browser" })
 end
+
 if nixCats("ui.telescope.liveSearch") then
-    table.insert(keys, { "<space>/", "<cmd>Telescope live_grep<cr>", desc = "Search" })
+    table.insert(keys, { "<space>/", "<cmd>Telescope live_grep<cr>", desc = "Search", noremap = true })
 end
 if nixCats("ui.telescope.buffers") then
     table.insert(keys, { "<c-w>b", "<cmd>Telescope buffers<cr>", desc = "Buffers" })
@@ -51,7 +53,7 @@ require("lz.n").load({
 
         local themes = require("telescope.themes")
         for key, value in pairs(themes) do
-            local original_theme = themes[key]
+            local original_theme = value
             themes[key] = function (opts)
                 return original_theme(vim.tbl_deep_extend("keep", opts, { borderchars = border }))
             end

@@ -92,7 +92,9 @@
             ];
             lsp.md = [ markview-nvim ];
             lsp.help = [ helpview-nvim ];
-            ui.telescope.enabled = [ plenary-nvim ];
+            ui.telescope.enabled = [
+              telescope-file-browser-nvim
+            ];
             git = [ gitsigns-nvim ];
             completion.enabled = [
               blink-cmp
