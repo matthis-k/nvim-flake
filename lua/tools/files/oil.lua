@@ -18,23 +18,20 @@ setmetatable(FileExplorer, {
             row = 0,
             col = 0,
             show_hidden = false,
-            buf = nil,
+            buf = vim.api.nvim_create_buf(false, true),
             prev_win_id = vim.api.nvim_get_current_win(),
             width = 1,
             height = 1,
-            win = nil,
+            win = 0,
             entries = {},
             visible_entries = {},
             marked = {},
         }, FileExplorer)
 
-        local ok_buf, buf = pcall(vim.api.nvim_create_buf, false, true)
-        if not ok_buf or not buf then
-            vim.notify("Buffer creation failed: " .. tostring(buf), vim.log.levels.ERROR)
+        if instance.buf == 0 then
+            vim.notify("Buffer creation failed: " .. tostring(instance.buf), vim.log.levels.ERROR)
             return nil
         end
-        instance.buf = buf
-
 
         local win_config = {
             relative = "tabline",
@@ -49,12 +46,12 @@ setmetatable(FileExplorer, {
             title = instance.title,
             title_pos = "left",
         }
-        local ok_win, win = pcall(vim.api.nvim_open_win, instance.buf, true, win_config)
-        if not ok_win or not win then
+        instance.win = vim.api.nvim_open_win(instance.buf, true, win_config)
+        if instance.win == 0 then
+            vim.api.nvim_buf_delete(instance.buf, { force = true })
             vim.notify("Window creation failed: " .. tostring(win), vim.log.levels.ERROR)
             return nil
         end
-        instance.win = win
 
         vim.wo[instance.win].sidescrolloff = 0
         vim.b[instance.buf].completion = false
