@@ -61,3 +61,8 @@ map("n", "<leader>vc", require("theme.color_preview").toggle, { desc = "Toggle c
 map("n", "<leader>q", "<nop>", { desc = "Quickfix" })
 map("n", "<leader>qj", "<cmd>cnext<cr>", { desc = "Next Quickfix", silent = true })
 map("n", "<leader>qk", "<cmd>cprev<cr>", { desc = "Prev Quickfix", silent = true })
+
+map("n", "gri", vim.lsp.buf.implementation, { desc = "Go to implementation" })
+map("n", "gra", vim.lsp.buf.code_action, { desc = "Code action" })
+map("n", "grr", vim.lsp.buf.references, { desc = "Find referencces" })
+map("n", "grn", vim.lsp.buf.rename, { desc = "Rename" })

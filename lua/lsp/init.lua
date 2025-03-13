@@ -7,27 +7,9 @@ require("lz.n").load({
     event = { "BufWritePre" },
     cmd = { "ConformInfo", "FormatOff", "FormatOn" },
     keys = {
-        {
-            "<leader>vf",
-            "<cmd>FormatOn<cr>",
-            mode = "n",
-            silent = true,
-            desc = "Re-enable autoformat-on-save",
-        },
-        {
-            "<leader>vF",
-            "<cmd>FormatOff<cr>",
-            mode = "n",
-            silent = true,
-            desc = "Disable autoformat-on-save",
-        },
-        {
-            "<leader>l",
-            "<nop>",
-            mode = "n",
-            silent = true,
-            desc = "Lsp",
-        },
+        { "<leader>vf", "<cmd>FormatOn<cr>",  mode = "n", silent = true, desc = "Re-enable autoformat-on-save" },
+        { "<leader>vF", "<cmd>FormatOff<cr>", mode = "n", silent = true, desc = "Disable autoformat-on-save" },
+        { "<leader>l",  "<nop>",              mode = "n", silent = true, desc = "Lsp" },
         {
             "<leader>lf",
             function ()
@@ -91,8 +73,6 @@ require("lz.n").load({
     ft = "lua",
     after = function ()
         require("lazydev").setup({
-        })
-        require("lazydev").setup({
             library = {
                 { words = { "nixCats" },       path = (require("nixCats").nixCatsPath or "") .. "/lua" },
                 { path = "luvit-meta/library", words = { "vim%.uv" } },
@@ -145,24 +125,34 @@ local function toggle_inlay_hints()
     vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
 end
 
+local border = require("constants").wins.border
+local function with_border(fn)
+    return function ()
+        fn({ border = border })
+    end
+end
+
 -- keys are a lsp-method (see `:h lsp-method`)
 local capability_keymap_table = {
     ["textDocument/codeAction"] = {
-        { "n", "<space>la", vim.lsp.buf.code_action, { silent = true, desc = "Code action" } },
+        { "n", "gra", with_border(vim.lsp.buf.code_action), { silent = true, desc = "Code action" } },
     },
     ["textDocument/declaration*"] = {
         { "n", "gD", vim.lsp.buf.declaration, { silent = true, desc = "Go to declaration" } },
     },
     ["textDocument/definition"] = {
-        { "n", "gd", vim.lsp.buf.definition, { silent = true, desc = "Go to definition" } },
+        { "n", "gd", nixCats("telescope.enabled") and "<cmd>Telescope lsp_definitions<cr>"
+        or vim.lsp.buf.definition, { silent = true, desc = "Go to definition" } },
     },
     ["textDocument/formatting"] = {
+        -- handled by conform
     },
     ["textDocument/hover"] = {
-        { "n", "K", vim.lsp.buf.hover, { silent = true, desc = "Show hover information" } },
+        { "n", "K", with_border(vim.lsp.buf.hover), { silent = true, desc = "Show hover information" } },
     },
     ["textDocument/implementation*"] = {
-        { "n", "gI", vim.lsp.buf.implementation, { silent = true, desc = "Go to implementation" } },
+        { "n", "gri", nixCats("telescope.enabled") and "<cmd>Telescope lsp_implementations<cr>"
+        or vim.lsp.buf.implementation, { silent = true, desc = "Go to implementation" } },
     },
     ["textDocument/inlayHint"] = {
         { "n", "<space>li", toggle_inlay_hints, { silent = true, desc = "Toggle inlay hints" } },
@@ -170,13 +160,15 @@ local capability_keymap_table = {
     ["textDocument/rangeFormatting"] = {
     },
     ["textDocument/references"] = {
-        { "n", "gr", "<cescope lsp_references<cr>", { silent = true, desc = "Find references" } },
+        { "n", "grr", nixCats("telescope.enabled") and "<cmd>Telescope lsp_references<cr>"
+        or vim.lsp.buf.references, { silent = true, desc = "Find references" } },
     },
     ["textDocument/rename"] = {
-        { "n", "<space>lr", vim.lsp.buf.rename, { silent = true, desc = "Rename symbol" } },
+        { "n", "grn", vim.lsp.buf.rename, { silent = true, desc = "Rename symbol" } },
     },
     ["textDocument/typeDefinition*"] = {
-        { "n", "<space>lD", vim.lsp.buf.type_definition, { silent = true, desc = "Go to type definition" } },
+        { "n", "grd", nixCats("telescope.enabled") and "<cmd>Telescope lsp_type_definitions<cr>"
+        or vim.lsp.buf.type_definition, { silent = true, desc = "Go to type definition" } },
     },
     ["workspace/workspaceFolders"] = {
         { "n", "<leader>lw", "<nop>",                             { desc = "Workspace" } },
@@ -186,7 +178,7 @@ local capability_keymap_table = {
     },
     always = {
         { "n", "<leader>l", "<nop>",                                             { desc = "Lsp" } },
-        { "n", "gl",        vim.diagnostic.open_float,                           { silent = true, desc = "Open diagnostics" } },
+        { "n", "gl",        with_border(vim.diagnostic.open_float),              { silent = true, desc = "Open diagnostics" } },
         { "n", "<space>lk", function () vim.diagnostic.jump({ count = -1 }) end, { silent = true, desc = "Go to prev diagnostic" } },
         { "n", "<space>lj", function () vim.diagnostic.jump({ count = 1 }) end,  { silent = true, desc = "Go to next diagnostic" } },
     },
