@@ -24,21 +24,10 @@
       luaPath = "${./.}";
       forEachSystem = utils.eachSystem nixpkgs.lib.platforms.all;
       extra_pkg_config = { };
-      inherit
-        (forEachSystem (
-          system:
-          let
-            dependencyOverlays = [
-              (utils.sanitizedPluginOverlay inputs)
-              inputs.rust-overlay.overlays.default
-            ];
-          in
-          {
-            inherit dependencyOverlays;
-          }
-        ))
-        dependencyOverlays
-        ;
+      dependencyOverlays = [
+        (utils.sanitizedPluginOverlay inputs)
+        inputs.rust-overlay.overlays.default
+      ];
       categoryDefinitions =
         {
           pkgs,
@@ -68,6 +57,7 @@
             ];
             lsp.toml = with pkgs; [ taplo ];
             lsp.ts = with pkgs; [ nodePackages_latest.typescript-language-server ];
+            lsp.xml = with pkgs; [ lemminx ];
             general = with pkgs; [
               curl
               fd
@@ -161,6 +151,7 @@
                   md = true;
                   ts = true;
                   help = true;
+                  xml = true;
                 };
                 git = true;
                 sessions = true;
