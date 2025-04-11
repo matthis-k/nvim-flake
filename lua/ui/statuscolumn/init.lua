@@ -2,6 +2,7 @@ if not nixCats("ui.statuscolumn") then
     return
 end
 local utf8sub = require("utils").utf8sub
+local foldexpr = require("utils").foldexpr
 local Part = require("ui.lib.linepart")
 
 local M = {}
@@ -58,25 +59,30 @@ local function init_cache(win)
     end
     cache.ns_ids = ns_ids
 
-    cache.folds = {}
-
-    local cursor_line = cache.cursor_line
-    local fold_level = vim.fn.foldlevel(cursor_line)
-
-    local start_line = cursor_line
-    while start_line >= vim.fn.line("w0", win) and vim.fn.foldlevel(start_line - 1) >= fold_level do
-        start_line = start_line - 1
+    cache.folds = {
+        current = {
+            first = cache.first_line,
+            last = cache.last_line,
+            level = vim.fn.foldlevel("."),
+        },
+    }
+    for line = cache.cursor_line, cache.first_line, -1 do
+        ---@type string
+        local fold_str = foldexpr(line, win)
+        if fold_str:match("^[a>]" .. cache.folds.current.level) then
+            cache.folds.current.first = line
+            break
+        end
     end
-    local end_line = cursor_line
-    while end_line < vim.fn.line("w$", win) and vim.fn.foldlevel(end_line + 1) >= fold_level do
-        end_line = end_line + 1
+    for line = cache.cursor_line, cache.last_line do
+        ---@type string
+        local fold_str = foldexpr(line, win)
+        if fold_str:match("^[<s]" .. cache.folds.current.level) then
+            cache.folds.current.last = line
+            break
+        end
     end
-    cache.folds.start_line = start_line
-    cache.folds.end_line = end_line
     cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
-    cache.folds.fold_level = vim.fn.foldlevel(".")
-    cache.folds.on_closed_fold = vim.fn.foldclosed(cursor_line) ~= -1
-    cache.is_focused_window = vim.api.nvim_get_current_win() == win
 end
 
 
@@ -85,10 +91,27 @@ function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
     vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
 end
 
+function _G.click_handlers.click_fold(minwid, clicks, button, mods)
+    local mouse = vim.fn.getmousepos()
+    local win = mouse.winid
+    local lnum = mouse.line
+    local fold_str = foldexpr(lnum, win)
+
+    if fold_str:match("^>%d+") then
+        if vim.fn.foldclosed(lnum) == -1 then
+            vim.cmd(lnum .. "foldclose")
+        else
+            vim.cmd(lnum .. "foldopen")
+        end
+    else
+        vim.api.nvim_win_set_cursor(win, { lnum, 0 })
+    end
+end
+
 local number_column = Part()
     :cache(function (lcache, shared)
         lcache.is_focused = shared.win == vim.api.nvim_get_current_win()
-        lcache.show_relative = is_focused and vim.wo[shared.win].relativenumber
+        lcache.show_relative = lcache.is_focused and vim.wo[shared.win].relativenumber
     end)
     :text(function (lcache, shared)
         local text = string.rep(" ", cache.numberwidth or 0)
@@ -118,47 +141,26 @@ local number_column = Part()
 
 local fold_column = Part()
     :cache(function (lcache, shared)
-        if (not cache) or (not cache.folds) then return end
-        local symbol = ""
-        local hl = "StcFold"
-        if cache.folds.hide then
-        elseif cache.folds.fold_level == 0 or not cache.is_focused_window then
-            symbol = " "
-        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.start_line and vim.v.virtnum == 0 then
-            symbol, hl = "🭽", "StcFolded"
-        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.start_line and vim.v.virtnum > 0 then
-            symbol, hl = "▏", "StcFolded"
-        elseif cache.folds.on_closed_fold and vim.v.lnum == cache.folds.end_line + 1 then
-            symbol, hl = "▔", "StcFolded"
-        elseif vim.v.lnum == cache.folds.start_line and vim.v.virtnum == 0 then
-            symbol = "🭽"
-        elseif vim.v.lnum == cache.folds.start_line then
-            symbol = "▏"
-        elseif cache.folds.start_line < vim.v.lnum and vim.v.lnum < cache.folds.end_line then
-            symbol = "▏"
-        elseif vim.v.lnum == cache.folds.end_line then
-            local total_wraps = 0
-            local win_width = vim.api.nvim_win_get_width(shared.win)
-            local buf = vim.api.nvim_win_get_buf(shared.win)
-            local text = vim.api.nvim_buf_get_lines(buf, vim.v.lnum - 1, vim.v.lnum, false)[1] or ""
-            local text_width = vim.fn.strwidth(text)
-            local wrap_enabled = vim.wo.wrap
-            if wrap_enabled then
-                total_wraps = math.floor(text_width / win_width)
-            end
-            symbol = vim.v.virtnum == total_wraps and "🭼" or "▏"
-        else
-            symbol = " "
+        local inside_current_fold = cache and cache.folds and
+            cache.folds.current.first <= vim.v.lnum and
+            cache.folds.current.last >= vim.v.lnum
+
+        local hl = (inside_current_fold and cache.folds.current.level >= 1) and "StcFoldCurrent" or "StcFold"
+        local text = " "
+
+        ---@type string
+        local fold_str = foldexpr()
+        if fold_str:match("^[a>]%d+") then
+            local is_closed = vim.fn.foldclosed(vim.v.lnum) > 0
+            text = is_closed and "+" or "-"
         end
-        lcache.text = symbol
+
+        lcache.text = text
         lcache.hl = hl
     end)
-    :text(function (lcache, shared)
-        return lcache.text
-    end)
-    :hl(function (lcache, shared)
-        return lcache.hl
-    end)
+    :text(function (lcache) return lcache.text end)
+    :hl(function (lcache) return lcache.hl end)
+    :on_click("v:lua.click_handlers.click_fold")
 
 local function signs(opts)
     return Part()
@@ -255,7 +257,8 @@ vim.api.nvim_set_hl(0, "StcFoldColumn", hl({ link = "FoldColumn" }))
 vim.api.nvim_set_hl(0, "StcLineNumber", hl({ link = "LineNr" }))
 vim.api.nvim_set_hl(0, "StcCurrentLineNumber", hl({ link = "CursorLine", bold = true }))
 vim.api.nvim_set_hl(0, "StcFold", hl({ fg = "FoldColumn" }))
-vim.api.nvim_set_hl(0, "StcFolded", hl({ fg = "Folded" }))
+vim.api.nvim_set_hl(0, "StcFoldCurrent", hl({ fg = "FoldColumn", bg = "Visual" }))
+vim.api.nvim_set_hl(0, "StcFolded", hl({ fg = "FoldColumn" }))
 
 vim.o.statuscolumn = "%!v:lua.StatusColumn()"
 vim.o.numberwidth = 4

@@ -39,25 +39,27 @@
         {
           propagatedBuildInputs = { };
           lspsAndRuntimeDeps = {
-            lsp.ccpp = with pkgs; [ clang-tools ];
-            lsp.css = with pkgs; [ vscode-langservers-extracted ];
-            lsp.json = with pkgs; [ vscode-langservers-extracted ];
-            lsp.lua = with pkgs; [
-              lua-language-server
-              stylua
-            ];
-            lsp.md = with pkgs; [ marksman ];
-            lsp.nix = with pkgs; [
-              nixfmt-rfc-style
-              nil
-            ];
-            lsp.rust = with pkgs; [
-              rust-analyzer
-              (rust-bin.stable.latest.default.override { extensions = [ "rust-src" ]; })
-            ];
-            lsp.toml = with pkgs; [ taplo ];
-            lsp.ts = with pkgs; [ nodePackages_latest.typescript-language-server ];
-            lsp.xml = with pkgs; [ lemminx ];
+            lsp = {
+              ccpp = with pkgs; [ clang-tools ];
+              css = with pkgs; [ vscode-langservers-extracted ];
+              json = with pkgs; [ vscode-langservers-extracted ];
+              lua = with pkgs; [
+                lua-language-server
+                stylua
+              ];
+              md = with pkgs; [ marksman ];
+              nix = with pkgs; [
+                nixfmt-rfc-style
+                nil
+              ];
+              rust = with pkgs; [
+                rust-analyzer
+                (rust-bin.stable.latest.default.override { extensions = [ "rust-src" ]; })
+              ];
+              toml = with pkgs; [ taplo ];
+              ts = with pkgs; [ nodePackages_latest.typescript-language-server ];
+              xml = with pkgs; [ lemminx ];
+            };
             general = with pkgs; [
               curl
               fd
@@ -75,16 +77,20 @@
               which-key-nvim
             ];
             sessions = [ resession-nvim ];
-            ui.telescope.resession = [ pkgs.neovimPlugins.resession-telescope-nvim ];
-            lsp.enabled = [
-              nvim-lspconfig
-              pkgs.vimPlugins.nvim-treesitter.withAllGrammars
-            ];
-            lsp.md = [ markview-nvim ];
-            lsp.help = [ helpview-nvim ];
-            ui.telescope.enabled = [
-              telescope-file-browser-nvim
-            ];
+            ui = {
+              telescope.resession = [ pkgs.neovimPlugins.resession-telescope-nvim ];
+              telescope.enabled = [
+                telescope-file-browser-nvim
+              ];
+            };
+            lsp = {
+              enabled = [
+                nvim-lspconfig
+                pkgs.vimPlugins.nvim-treesitter.withAllGrammars
+              ];
+              md = [ markview-nvim ];
+              help = [ helpview-nvim ];
+            };
             git = [ gitsigns-nvim ];
             completion.enabled = [
               blink-cmp
@@ -95,11 +101,13 @@
             general = [ conform-nvim ];
             ui.telescope.enabled = [ telescope-nvim ];
           };
-          sharedLibraries = { };
+          sharedLibraries = {
+            general = with pkgs; [ libgit2 ];
+            ui.statusline = with pkgs; [ libgit2 ];
+          };
           environmentVariables = { };
-          ui.statusline = with pkgs; [ libgit2 ];
           extraWrapperArgs = { };
-          extraPython3Packages = { };
+          python3.libraries = { };
           extraLuaPackages = {
             general = ps: [
               ps.magick
@@ -122,21 +130,22 @@
             {
               settings = {
                 wrapRc = wrapped;
-                viAlias = false;
-                vimAlias = false;
+                aliases = [
+                  "vi"
+                  "vim"
+                ];
                 extraName = "nixovim";
-                withRuby = true;
-                withPython3 = true;
-                withNodeJs = false;
-                withPerl = false;
+                hosts.ruby.enable = true;
+                hosts.python3.enable = true;
+                hosts.node.enable = true;
+                hosts.perl.enable = true;
                 configDirName = "nixovim";
-                unwrappedCfgPath = null;
+                unwrappedCfgPath = "/home/matthisk/nvim-flake";
                 neovim-unwrapped = inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
                 nvimSRC = null;
                 suffix-path = false;
                 suffix-LD = false;
                 disablePythonSafePath = false;
-                gem_path = null;
               };
               categories = rec {
                 general = true;
@@ -202,33 +211,43 @@
         };
       }
     )
-    // {
-      overlays = utils.makeOverlays luaPath {
-        inherit nixpkgs dependencyOverlays extra_pkg_config;
-      } categoryDefinitions packageDefinitions defaultPackageName;
-      nixosModules.default = utils.mkNixosModules {
-        inherit
-          defaultPackageName
-          dependencyOverlays
-          luaPath
-          categoryDefinitions
-          packageDefinitions
-          extra_pkg_config
-          nixpkgs
-          ;
-      };
-      homeModule = utils.mkHomeModules {
-        inherit
-          defaultPackageName
-          dependencyOverlays
-          luaPath
-          categoryDefinitions
-          packageDefinitions
-          extra_pkg_config
-          nixpkgs
-          ;
-      };
-      inherit utils;
-      inherit (utils) templates;
-    };
+    // (
+      let
+        nixosModule = utils.mkNixosModules {
+          moduleNamespace = [ defaultPackageName ];
+          inherit
+            defaultPackageName
+            dependencyOverlays
+            luaPath
+            categoryDefinitions
+            packageDefinitions
+            extra_pkg_config
+            nixpkgs
+            ;
+        };
+        homeModule = utils.mkHomeModules {
+          moduleNamespace = [ defaultPackageName ];
+          inherit
+            defaultPackageName
+            dependencyOverlays
+            luaPath
+            categoryDefinitions
+            packageDefinitions
+            extra_pkg_config
+            nixpkgs
+            ;
+        };
+      in
+      {
+        overlays = utils.makeOverlays luaPath {
+          inherit nixpkgs dependencyOverlays extra_pkg_config;
+        } categoryDefinitions packageDefinitions defaultPackageName;
+
+        nixosModules.default = nixosModule;
+        homeModules.default = homeModule;
+
+        inherit utils nixosModule homeModule;
+        inherit (utils) templates;
+      }
+    );
 }

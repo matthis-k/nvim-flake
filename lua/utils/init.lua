@@ -122,4 +122,14 @@ function M.validate(subject, schema, opts)
     return valid
 end
 
+function M.foldexpr(lnum, win)
+    local old_lnum = vim.v.lnum
+    if lnum then
+        vim.v.lnum = lnum
+    end
+    local res = vim.fn.eval(vim.wo[win or vim.v.windowid].foldexpr)
+    vim.v.lnum = old_lnum
+    return res
+end
+
 return M
