@@ -15,7 +15,7 @@ function M.toggle()
 
     local lines = {}
     for i = 0, 15 do
-        local key = string.format("base0%x", i)
+        local key = string.format("base0%X", i)
         local line_text = string.format("%s: ███", key)
         table.insert(lines, line_text)
     end
@@ -45,7 +45,7 @@ function M.toggle()
 
     local ns = vim.api.nvim_create_namespace("color_blocks")
     for i = 0, 15 do
-        local key = string.format("base0%x", i)
+        local key = string.format("base0%X", i)
         local hl_group = "ColorBlock_" .. key
         vim.api.nvim_set_hl(0, hl_group, { fg = colors[key] })
         local col_start = #key + 2
