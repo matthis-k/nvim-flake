@@ -9,6 +9,10 @@
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     neovim-nightly-overlay.inputs.nixpkgs.follows = "nixpkgs";
 
+    nil-ls.url = "github:oxalica/nil/577d160da311cc7f5042038456a0713e9863d09e";
+    nil-ls.inputs.nixpkgs.follows = "nixpkgs";
+    nil-ls.inputs.rust-overlay.follows = "rust-overlay";
+
     plugins-resession-telescope-nvim.url = "github:scottmckendry/telescope-resession.nvim";
     plugins-resession-telescope-nvim.flake = false;
   };
@@ -27,6 +31,7 @@
       dependencyOverlays = [
         (utils.sanitizedPluginOverlay inputs)
         inputs.rust-overlay.overlays.default
+        inputs.nil-ls.overlays.nil
       ];
       categoryDefinitions =
         {
