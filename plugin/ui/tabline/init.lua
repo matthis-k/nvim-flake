@@ -1,8 +1,12 @@
+if not nixCats("ui.tabline") then
+    return
+end
+
 local utils = require("utils")
 
 local Part = require("ui.lib.linepart")
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_buffer(minwid, num_clicks, btn, mods)
     local buf = minwid
     local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
@@ -15,14 +19,14 @@ function _G.click_handlers.click_buffer(minwid, num_clicks, btn, mods)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_close_buffer(minwid, num_clicks, btn, mods)
     local buf = minwid
     vim.api.nvim_buf_delete(buf, {})
     vim.cmd("redrawtabline")
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_tab(minwid, num_clicks, btn, mods)
     local tabpage = tonumber(minwid)
     if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
@@ -30,7 +34,7 @@ function _G.click_handlers.click_tab(minwid, num_clicks, btn, mods)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_close_tab(minwid, num_clicks, btn, mods)
     local tabpage = tonumber(minwid)
     if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
@@ -40,7 +44,7 @@ function _G.click_handlers.click_close_tab(minwid, num_clicks, btn, mods)
     vim.cmd("redrawtabline")
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_buffer(buf)
     local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
         return vim.api.nvim_win_get_buf(win) == buf
@@ -52,7 +56,7 @@ function _G.click_handlers.click_buffer(buf)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_close_buffer(buf)
     vim.api.nvim_buf_delete(buf, {})
     vim.cmd("redrawtabline")
@@ -192,10 +196,30 @@ M.tabs = Part()
     })
     :hl("TblSectionC")
 
-M.whole = Part():hl("TblSectionC"):children({
+local line = Part():hl("TblSectionC"):children({
     M.buffers,
     Part("%="):hl("StlSectionC"),
     M.tabs,
+})
+---Creates tab line format string
+---@return string
+function TabLine()
+    return line:eval()
+end
+
+vim.o.tabline = "%!v:lua.TabLine()"
+vim.o.showtabline = 2
+
+vim.api.nvim_create_augroup("TablineRedraw", { clear = true })
+vim.api.nvim_create_autocmd({ "ModeChanged", "BufAdd", "BufDelete", "TabNew", "TabClosed", "DiagnosticChanged" }, {
+    group = "TablineRedraw",
+    pattern = "*",
+    callback = function ()
+        local buffers = vim.api.nvim_list_bufs()
+        if #buffers > 0 then
+            vim.cmd("redrawtabline")
+        end
+    end,
 })
 
 return M

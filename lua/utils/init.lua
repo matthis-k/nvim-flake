@@ -36,55 +36,11 @@ function M.dirs(dir)
     return result
 end
 
----@param args vim.api.keyset.highlight
----@return vim.api.keyset.highlight A composed highlight with given options
-function M.compose_hl(args)
-    local opts = vim.deepcopy(args) or {}
-    ---@type vim.api.keyset.highlight
-    local res = {}
-    if opts.link then
-        res = vim.api.nvim_get_hl(0, { name = opts.link, link = false }) or {}
-        opts.link = nil
-    end
-    if opts.fg and type(opts.fg) == "string" then
-        local hexcode = opts.fg:match("#%x%x%x%x?%x?%x?%x?%x?")
-        if hexcode then
-            res.fg = hexcode
-        else
-            local base = vim.api.nvim_get_hl(0, { name = opts.fg, link = false }) or {}
-            res.fg = base.fg
-        end
-        opts.fg = nil
-    end
-    if opts.bg and type(opts.bg) == "string" then
-        local hexcode = opts.bg:match("#%x%x%x%x?%x?%x?%x?%x?")
-        if hexcode then
-            res.bg = hexcode
-        else
-            local base = vim.api.nvim_get_hl(0, { name = opts.bg, link = false }) or {}
-            res.bg = base.bg
-        end
-        opts.bg = nil
-    end
-    if opts.sp and type(opts.sp) == "string" then
-        local hexcode = opts.sp:match("#%x%x%x%x?%x?%x?%x?%x?")
-        if hexcode then
-            res.sp = hexcode
-        else
-            local base = vim.api.nvim_get_hl(0, { name = opts.sp, link = false }) or {}
-            res.sp = base.sp
-        end
-        opts.sp = nil
-    end
-    if opts.reverse then
-        local tmp = res.fg
-        res.fg = res.bg
-        res.bg = tmp
-        opts.reverse = nil
-    end
-    ---@type  vim.api.keyset.highlight
-    return vim.tbl_deep_extend("keep", res, opts)
-end
+M.highlights = setmetatable({}, {
+    __index = function (_, key)
+        return setmetatable(vim.api.nvim_get_hl(0, { name = key, link = false }), nil)
+    end,
+})
 
 function M.utf8len(str)
     return #vim.str_utf_pos(str)
@@ -129,7 +85,7 @@ function M.foldexpr(lnum, win)
     end
     local res = vim.fn.eval(vim.wo[win or vim.v.windowid].foldexpr)
     vim.v.lnum = old_lnum
-    return res
+    return tostring(res)
 end
 
 return M

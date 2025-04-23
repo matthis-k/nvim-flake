@@ -2,6 +2,7 @@ local utils = require("utils")
 local Part = require("ui.lib.linepart")
 
 local M = {}
+M.git = require("ui.statusline.git")
 
 local modes = {
     ["n"] = { text = "NORMAL", hl = "StlModeNormal" },
@@ -78,9 +79,11 @@ M.filename = Part()
     end)
 
 M.modified = Part()
+    ---@diagnostic disable-next-line: unused-local
     :cache(function (lcache, shared)
         lcache.buf = vim.api.nvim_get_current_buf()
     end)
+    ---@diagnostic disable-next-line: unused-local
     :text(function (lcache, shared)
         if vim.bo[lcache.buf].modified then
             return "modified"
@@ -88,10 +91,12 @@ M.modified = Part()
     end)
 
 M.readonly = Part()
+    ---@diagnostic disable-next-line: unused-local
     :cache(function (lcache, shared)
         lcache.buf = vim.api.nvim_get_current_buf()
     end)
     :hl("@error")
+    ---@diagnostic disable-next-line: unused-local
     :text(function (lcache, shared)
         if vim.bo[lcache.buf].readonly then
             return "readonly"
@@ -148,5 +153,26 @@ M.filetype = Part()
     :text(function ()
         return string.format("%s", vim.bo.filetype or "none")
     end)
+
+M.whole = Part():children({
+    M.mode,
+    Part():hl("StlSectionB"):before(" "):after(" "):children({
+        M.git.all,
+        M.filename,
+        Part():hl("StlSectionB"):before("["):after("]"):children({
+            M.modified,
+            M.readonly,
+        }):child_sep(" "),
+        M.diagnostics,
+    }):child_sep(" "),
+    Part("%="):hl("StlSectionC"),
+    Part():hl("StlSectionB"):before(" "):after(" "):children({
+        M.filetype,
+        M.encoding,
+    }):child_sep(" "),
+    Part():hl(function (_, shared) return shared.mode_hl end):before(" "):after(" "):children({
+        M.pos,
+    }),
+}):hl("StlSectionC")
 
 return M

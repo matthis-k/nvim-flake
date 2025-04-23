@@ -48,8 +48,3 @@ require("gitsigns").setup({
         col = 1,
     },
 })
-
-local compose_hl = require("utils").compose_hl
-vim.api.nvim_set_hl(0, "GitSignsUntracked", compose_hl({ link = "@method" }))
-vim.api.nvim_set_hl(0, "GitSignsChange", compose_hl({ link = "@class" }))
-vim.api.nvim_set_hl(0, "GitSignsChangedelete", compose_hl({ link = "@constant" }))

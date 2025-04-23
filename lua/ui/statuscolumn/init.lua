@@ -1,6 +1,3 @@
-if not nixCats("ui.statuscolumn") then
-    return
-end
 local utf8sub = require("utils").utf8sub
 local foldexpr = require("utils").foldexpr
 local Part = require("ui.lib.linepart")
@@ -8,7 +5,7 @@ local Part = require("ui.lib.linepart")
 local M = {}
 
 local cache = {}
-local function init_cache(win)
+function M.init_cache(win)
     cache = {}
     cache.lines = {}
     cache.first_line = vim.fn.line("w0", win)
@@ -85,12 +82,13 @@ local function init_cache(win)
     cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
 end
 
-
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
     local mouse = vim.fn.getmousepos()
     vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
 end
 
+---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_fold(minwid, clicks, button, mods)
     local mouse = vim.fn.getmousepos()
     local win = mouse.winid
@@ -113,6 +111,7 @@ local number_column = Part()
         lcache.is_focused = shared.win == vim.api.nvim_get_current_win()
         lcache.show_relative = lcache.is_focused and vim.wo[shared.win].relativenumber
     end)
+    ---@diagnostic disable-next-line: unused-local
     :text(function (lcache, shared)
         local text = string.rep(" ", cache.numberwidth or 0)
         if vim.v.virtnum == 0 and cache.numberwidth and cache.numberwidth > 0 then
@@ -130,6 +129,7 @@ local number_column = Part()
         end
         return text
     end)
+    ---@diagnostic disable-next-line: unused-local
     :hl(function (lcache, shared)
         if vim.v.relnum == 0 and vim.wo[shared.win].relativenumber then
             return "StcCurrentLineNumber"
@@ -140,6 +140,7 @@ local number_column = Part()
     :on_click("v:lua.click_handlers.click_line")
 
 local fold_column = Part()
+    ---@diagnostic disable-next-line: unused-local
     :cache(function (lcache, shared)
         local inside_current_fold = cache and cache.folds and
             cache.folds.current.first <= vim.v.lnum and
@@ -164,6 +165,7 @@ local fold_column = Part()
 
 local function signs(opts)
     return Part()
+        ---@diagnostic disable-next-line: unused-local
         :cache(function (lcache, shared)
             for k, v in pairs(opts) do
                 lcache[k] = v
@@ -202,15 +204,18 @@ local function signs(opts)
             lcache.text = text
             lcache.hl = extmark[4].sign_hl_group
         end)
+        ---@diagnostic disable-next-line: unused-local
         :text(function (lcache, shared)
             return lcache.text
         end)
+        ---@diagnostic disable-next-line: unused-local
         :hl(function (lcache, shared)
             return lcache.hl
         end)
 end
 
-local stc = Part():cache(function (_, shared) shared.win = vim.g.statusline_winid end):children({
+
+M.whole = Part():cache(function (_, shared) shared.win = vim.g.statusline_winid end):children({
     signs({
         filter = function (name)
             return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
@@ -226,41 +231,5 @@ local stc = Part():cache(function (_, shared) shared.win = vim.g.statusline_wini
         width = 1,
     }),
 })
-
----Defines my status column
----@return string
-function StatusColumn()
-    local win = vim.g.statusline_winid
-    if not vim.wo[win].statuscolumn then
-        return ""
-    end
-
-    local ok, first_line = pcall(vim.fn.line, "w0", win)
-    if not ok then return "" end
-    local last_line = vim.fn.line("w$", win)
-
-    if vim.v.lnum < first_line or last_line < vim.v.lnum then
-        return ""
-    end
-
-    if vim.v.lnum == first_line then
-        init_cache(win)
-    end
-
-    return stc:eval()
-end
-
-local hl = require("utils").compose_hl
-
-vim.api.nvim_set_hl(0, "StcSignColumn", hl({ link = "SignColumn" }))
-vim.api.nvim_set_hl(0, "StcFoldColumn", hl({ link = "FoldColumn" }))
-vim.api.nvim_set_hl(0, "StcLineNumber", hl({ link = "LineNr" }))
-vim.api.nvim_set_hl(0, "StcCurrentLineNumber", hl({ link = "CursorLine", bold = true }))
-vim.api.nvim_set_hl(0, "StcFold", hl({ fg = "FoldColumn" }))
-vim.api.nvim_set_hl(0, "StcFoldCurrent", hl({ fg = "FoldColumn", bg = "Visual" }))
-vim.api.nvim_set_hl(0, "StcFolded", hl({ fg = "FoldColumn" }))
-
-vim.o.statuscolumn = "%!v:lua.StatusColumn()"
-vim.o.numberwidth = 4
 
 return M
