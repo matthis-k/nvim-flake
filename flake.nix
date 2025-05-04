@@ -81,6 +81,7 @@
               base16-nvim
               which-key-nvim
               nvim-web-devicons
+              nui-nvim
             ];
             sessions = [ resession-nvim ];
             ui = {

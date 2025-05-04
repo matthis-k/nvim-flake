@@ -2,29 +2,60 @@ if not nixCats("ui.statuscolumn") then
     return
 end
 
+local ffi = require("ffi")
+
+ffi.cdef [[
+  typedef unsigned long long disptick_T;
+  extern disptick_T display_tick;
+]]
+
+local last_tick = -1
+
 local stc = require("ui.statuscolumn")
+local total_calls = 0
+local total_time_ns = 0
+local total_cache_time_ns = 0
+local total_eval_time_ns = 0
+local total_redraws = 0
 
 ---Defines my status column
 ---@return string
 function StatusColumn()
-    local win = vim.g.statusline_winid
-    if not vim.wo[win].statuscolumn then
-        return ""
+    local start = vim.uv.hrtime()
+    local tick = ffi.C.display_tick
+    local eval_start = vim.uv.hrtime()
+    if tick ~= last_tick then
+        total_redraws = total_redraws + 1
+        last_tick = tick
+        local cache_start = vim.uv.hrtime()
+        stc.init_cache()
+        total_cache_time_ns = total_cache_time_ns + (vim.uv.hrtime() - cache_start)
     end
+    local res = stc.whole:eval()
+    local eval_duration = vim.uv.hrtime() - eval_start
+    total_eval_time_ns = total_eval_time_ns + eval_duration
 
-    local ok, first_line = pcall(vim.fn.line, "w0", win)
-    if not ok then return "" end
-    local last_line = vim.fn.line("w$", win)
+    total_time_ns = total_time_ns + (vim.uv.hrtime() - start)
+    total_calls = total_calls + 1
+    return res
+end
 
-    if vim.v.lnum < first_line or last_line < vim.v.lnum then
-        return ""
-    end
+function STLAVG()
+    local avg_per_call = (total_time_ns / total_calls) / 1e6
+    local avg_per_redraw = (total_time_ns / total_redraws) / 1e6
+    local avg_eval = (total_eval_time_ns / total_calls) / 1e6
 
-    if vim.v.lnum == first_line then
-        stc.init_cache(win)
-    end
-
-    return stc.whole:eval()
+    vim.print(table.concat({
+        ("total calls: %d"):format(total_calls),
+        ("total redraws: %d"):format(total_redraws),
+        ("total time: %.fms"):format(total_time_ns / 1e6),
+        ("time/call: %.2fms"):format(avg_per_call),
+        ("time/redraw: %.2fms"):format(avg_per_redraw),
+        ("time/eval: %.2fms"):format(avg_eval),
+        ("evals/redraw: %.2f"):format(total_calls / math.max(total_redraws, 1)),
+        ("caching time/redraw: %.2fms"):format(total_cache_time_ns / math.max(total_redraws, 1) / 1e6),
+    }, "\n"
+    ))
 end
 
 vim.o.statuscolumn = "%!v:lua.StatusColumn()"

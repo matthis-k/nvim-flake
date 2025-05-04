@@ -1,8 +1,12 @@
 _G.click_handlers = _G.click_handlers or {}
+
+local part_timings = {}
+
 local EMPTY = ""
 ---@class PartData
 ---@field hl? string|fun(lcache:table, shared:table):string?
 ---@field text? string|fun(lcache:table, shared:table):string?
+---@field name? string|fun(lcache:table, shared:table):string?
 ---@field on_click? string|fun(lcache:table, shared:table):string?
 ---@field on_click_param? string|fun(lcache:table, shared:table):string?
 ---@field children? Part[]|fun(lcache:table, shared:table):Part[]?
@@ -52,6 +56,13 @@ end
 ---@return Part
 function Part:text(text)
     self.data.text = text
+    return self
+end
+
+---@param name string|fun(lcache:table, shared:table):string?
+---@return Part
+function Part:name(name)
+    self.data.name = name
     return self
 end
 
@@ -138,6 +149,7 @@ function Part:init_caches(local_cache, shared_cache)
 end
 
 function Part:eval(shared_cache)
+    local start = vim.uv.hrtime()
     local data = self.data or {}
     local opts = type(data.opts) == "function" and data.opts() or data.opts or {}
     local ignore_empty_child = opts.ignore_empty_child ~= nil and opts.ignore_empty_child or true
@@ -205,11 +217,28 @@ function Part:eval(shared_cache)
         end
         res.click_suffix = "%T"
     end
+    if self.data.name then
+        local duration = vim.uv.hrtime() - start
+        part_timings[self.data.name] = part_timings[self.data.name] or { total_duration = 0, calls = 0 }
+        local stats = part_timings[self.data.name]
+        stats.total_duration = stats.total_duration + duration
+        stats.calls = stats.calls + 1
+    end
 
     if #res.own_content > 0 then
         return res.click_prefix .. res.hl .. res.before .. res.own_content .. res.after .. res.click_suffix
     else
         return EMPTY
+    end
+end
+
+function LOGPARTS()
+    for name, stats in pairs(part_timings) do
+        print(string.format("%s: %.2fms (calls: %d, total: %.2fms)",
+            name,
+            stats.total_duration / stats.calls / 1e6,
+            stats.calls,
+            stats.total_duration / 1e6))
     end
 end
 

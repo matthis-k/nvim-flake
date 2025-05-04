@@ -78,14 +78,42 @@ function M.validate(subject, schema, opts)
     return valid
 end
 
-function M.foldexpr(lnum, win)
-    local old_lnum = vim.v.lnum
-    if lnum then
-        vim.v.lnum = lnum
+local ffi = require("ffi")
+
+ffi.cdef [[
+typedef struct {
+  int start;
+  int end;
+  int level;
+  int lines;
+} FoldInfo;
+
+FoldInfo fold_info(void *win, int lnum);
+void* find_window_by_handle(int handle, int *error);
+]]
+
+
+local function get_fold_info(winid, lnum)
+    if type(winid) ~= "number" or type(lnum) ~= "number" then
+        return nil
     end
-    local res = vim.fn.eval(vim.wo[win or vim.v.windowid].foldexpr)
-    vim.v.lnum = old_lnum
-    return tostring(res)
+
+    local err = ffi.new("int[1]")
+    local cwin = ffi.C.find_window_by_handle(winid, err)
+    if err[0] ~= 0 or cwin == nil then
+        return nil
+    end
+
+    local ok, result = pcall(ffi.C.fold_info, cwin, lnum)
+    if not ok then
+        return nil
+    end
+    return result
+end
+
+function M.foldexpr(lnum, win)
+    local target_win = win or vim.api.nvim_get_current_win()
+    return get_fold_info(target_win, lnum)
 end
 
 return M

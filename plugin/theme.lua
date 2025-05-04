@@ -18,6 +18,8 @@ hl.PMenuSel                  = {
 }
 hl.CmpItemAbbr               = { guifg = nil, guibg = nil, gui = nil, guisp = nil, ctermfg = nil, ctermbg = nil }
 
+hl.TSVariable                = { guifg = colors.base0A }
+
 hl.TblSectionA               = "StlSectionA"
 hl.TblSectionB               = "StlSectionB"
 hl.TblSectionC               = "StlSectionC"
@@ -82,6 +84,6 @@ hl.StcSignColumn             = "SignColumn"
 hl.StcFoldColumn             = "FoldColumn"
 hl.StcLineNumber             = "LineNr"
 hl.StcCurrentLineNumber      = { link = "CursorLine", gui = "bold" }
-hl.StcFold                   = { guifg = colors.base03 }
-hl.StcFoldCurrent            = { guifg = colors.base03, guibg = colors.base02 }
-hl.StcFolded                 = { guifg = colors.base03 }
+hl.StcFold                   = { guifg = colors.base0D }
+hl.StcFoldCurrent            = { guifg = colors.base0D, guibg = colors.base02 }
+hl.StcFolded                 = { guifg = colors.base0D }
