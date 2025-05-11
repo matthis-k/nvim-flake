@@ -7,7 +7,7 @@ local stl = require("ui.statusline")
 ---Creates status line format string
 ---@return string
 function StatusLine()
-    return stl.whole:eval()
+    return stl.whole:instanciate():build_string()
 end
 
 vim.o.statusline = "%!v:lua.StatusLine()"

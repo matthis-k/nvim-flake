@@ -1,13 +1,15 @@
-local utils = require("utils")
+local utils       = require("utils")
 
-local Part = require("ui.lib.linepart")
+local Part        = require("part")
+local Builder     = Part.Builder
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_buffer(minwid, num_clicks, btn, mods)
-    local buf = minwid
-    local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
-        return vim.api.nvim_win_get_buf(win) == buf
-    end)
+_G.click_handlers = _G.click_handlers or {}
+
+---@diagnostic disable-next-line: duplicate-set-field,unused-local
+function _G.click_handlers.click_buffer(minwid, _num_clicks, _btn, _mods)
+    local buf = tonumber(minwid)
+    local win = vim.iter(vim.api.nvim_tabpage_list_wins(0))
+        :find(function (w) return vim.api.nvim_win_get_buf(w) == buf end)
     if win then
         vim.api.nvim_set_current_win(win)
     else
@@ -15,187 +17,175 @@ function _G.click_handlers.click_buffer(minwid, num_clicks, btn, mods)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_close_buffer(minwid, num_clicks, btn, mods)
-    local buf = minwid
-    vim.api.nvim_buf_delete(buf, {})
-    vim.cmd("redrawtabline")
-end
-
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_tab(minwid, num_clicks, btn, mods)
-    local tabpage = tonumber(minwid)
-    if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
-        vim.api.nvim_set_current_tabpage(tabpage)
+---@diagnostic disable-next-line: duplicate-set-field,unused-local
+function _G.click_handlers.click_close_buffer(minwid, _num_clicks, _btn, _mods)
+    local buf = tonumber(minwid)
+    if buf and vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_delete(buf, { force = false })
+        vim.cmd.redrawtabline()
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_close_tab(minwid, num_clicks, btn, mods)
-    local tabpage = tonumber(minwid)
-    if tabpage and vim.api.nvim_tabpage_is_valid(tabpage) then
-        local tabpage_num = vim.api.nvim_tabpage_get_number(tabpage)
-        vim.cmd("tabclose " .. tabpage_num)
-    end
-    vim.cmd("redrawtabline")
-end
-
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_buffer(buf)
-    local win = vim.iter(vim.api.nvim_tabpage_list_wins(0)):find(function (win)
-        return vim.api.nvim_win_get_buf(win) == buf
-    end)
-    if win then
-        vim.api.nvim_set_current_win(win)
-    else
-        vim.api.nvim_set_current_buf(buf)
+---@diagnostic disable-next-line: duplicate-set-field,unused-local
+function _G.click_handlers.click_tab(minwid, _num_clicks, _btn, _mods)
+    local tp = tonumber(minwid)
+    if tp and vim.api.nvim_tabpage_is_valid(tp) then
+        vim.api.nvim_set_current_tabpage(tp)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field, unused-local
-function _G.click_handlers.click_close_buffer(buf)
-    vim.api.nvim_buf_delete(buf, {})
-    vim.cmd("redrawtabline")
+---@diagnostic disable-next-line: duplicate-set-field,unused-local
+function _G.click_handlers.click_close_tab(minwid, _num_clicks, _btn, _mods)
+    local tp = tonumber(minwid)
+    if tp and vim.api.nvim_tabpage_is_valid(tp) then
+        vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(tp))
+        vim.cmd.redrawtabline()
+    end
+end
+
+local function get_sign(name, fallback, texthl)
+    local sign  = vim.fn.sign_getdefined(name)[1] or {}
+    sign.text   = (sign.text ~= "") and sign.text or fallback
+    sign.texthl = (sign.texthl ~= "") and sign.texthl or texthl
+    return sign
 end
 
 local M = {}
 
+---@param buf integer
 function M.buffer(buf)
-    local filename = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
-    if filename == "" then
-        filename = "[No Name]"
-    end
+    local cur   = (vim.api.nvim_get_current_buf() == buf)
+    local fname = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
+    if fname == "" then fname = "[No Name]" end
 
-    local errors = #vim.diagnostic.get(buf, { severity = vim.diagnostic.severity.ERROR })
-    local warnings = #vim.diagnostic.get(buf, { severity = vim.diagnostic.severity.WARN })
-    local infos = #vim.diagnostic.get(buf, { severity = vim.diagnostic.severity.INFO })
-    local hints = #vim.diagnostic.get(buf, { severity = vim.diagnostic.severity.HINT })
+    return Builder({
+        before   = " ",
+        hl       = cur and "TblCurrentBuffer" or "TblBuffer",
+        children = {
+            Builder({ text = fname, hl = cur and "TblCurrentFilename" or "TblFilename" }),
 
-    local function get_sign(sign_name, default_text, default_hl)
-        local sign = vim.fn.sign_getdefined(sign_name)[1]
-        sign.texthl = default_hl
-        sign.text = sign.text or default_text
-        return sign
-    end
-
-    ---@diagnostic disable-next-line: unused-local
-    return Part():cache(function (lcache, shared)
-            shared.buf_cur_str = shared.buf_cur_str or {}
-            shared.buf_cur_str[buf] = (vim.api.nvim_get_current_buf() == buf) and "Current" or ""
-        end)
-        ---@diagnostic disable-next-line: unused-local
-        :children({ Part():text(filename):hl(function (lcache, shared)
-            return string.format("Tbl%sFilename", shared.buf_cur_str[buf])
-        end),
-            Part():children(
-            ---@diagnostic disable-next-line: unused-local
-                function (lcache, shared)
-                    local signs = {
-                        error = get_sign("DiagnosticSignError", "E",
-                            "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticError"),
-                        warn = get_sign("DiagnosticSignWarn", "W", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticWarn"),
-                        info = get_sign("DiagnosticSignInfo", "I", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticInfo"),
-                        hint = get_sign("DiagnosticSignHint", "H", "Tbl" .. shared.buf_cur_str[buf] .. "DiagnosticHint"),
+            Builder({
+                before    = " ",
+                child_sep = " ",
+                children  = function ()
+                    local out = {}
+                    local severities = {
+                        { sev = vim.diagnostic.severity.ERROR, name = "DiagnosticSignError", sym = "E", hl = "DiagnosticError" },
+                        { sev = vim.diagnostic.severity.WARN,  name = "DiagnosticSignWarn",  sym = "W", hl = "DiagnosticWarn" },
+                        { sev = vim.diagnostic.severity.INFO,  name = "DiagnosticSignInfo",  sym = "I", hl = "DiagnosticInfo" },
+                        { sev = vim.diagnostic.severity.HINT,  name = "DiagnosticSignHint",  sym = "H", hl = "DiagnosticHint" },
                     }
-                    local diagnostics = {}
-                    if errors > 0 then
-                        table.insert(diagnostics,
-                            Part(string.format("%d %s", errors, utils.utf8sub(signs.error.text, 1, 1))):hl(signs.error
-                                .texthl)
-                        )
+                    for _, s in ipairs(severities) do
+                        local n = #vim.diagnostic.get(buf, { severity = s.sev })
+                        if n > 0 then
+                            local sign = get_sign(s.name, s.sym)
+                            table.insert(out,
+                                Builder({
+                                    text = string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)),
+                                    hl = (cur and "TblCurrent" or "Tbl") .. s.hl,
+                                }))
+                        end
                     end
-                    if warnings > 0 then
-                        table.insert(diagnostics,
-                            Part(string.format("%d %s", warnings, utils.utf8sub(signs.warn.text, 1, 1))):hl(signs.warn
-                                .texthl))
-                    end
-                    if infos > 0 then
-                        table.insert(diagnostics,
-                            Part(string.format("%d %s", infos, utils.utf8sub(signs.info.text, 1, 1))):hl(signs.info
-                                .texthl))
-                    end
-                    if hints > 0 then
-                        table.insert(diagnostics,
-                            Part(string.format("%d %s", hints, utils.utf8sub(signs.hint.text, 1, 1))):hl(signs.hint
-                                .texthl))
-                    end
-                    return diagnostics
-                end
-            ):child_sep(" "):before(" "),
-            ---@diagnostic disable-next-line: unused-local
-            Part("󰖭"):before(" "):after(" "):hl(function (lcache, shared)
-                return string.format(
-                    "Tbl%sCloseButton", shared.buf_cur_str[buf])
-            end)
-                :on_click("v:lua.click_handlers.click_close_buffer", buf) })
-        :before(" ")
-        ---@diagnostic disable-next-line: unused-local
-        :hl(function (lcache, shared) return string.format("Tbl%sBuffer", shared.buf_cur_str[buf]) end)
+                    return out
+                end,
+            }),
+
+            Builder({
+                text           = "󰖭",
+                before         = " ",
+                after          = " ",
+                hl             = cur and "TblCurrentCloseButton" or "TblCloseButton",
+                on_click       = "v:lua.click_handlers.click_close_buffer",
+                on_click_param = tostring(buf),
+            }),
+        },
+    })
 end
 
-local mode = require("ui.statusline.common").mode
-M.buffers = Part():hl("TblSectionC"):children({
-    Part("Buffers"):cache(mode.data.cache):hl(mode.data.hl):before(" "):after(" "),
-    ---@diagnostic disable-next-line: unused-local
-    Part():hl("TblSectionC"):children(function (lcache, shared)
-        ---@diagnostic disable-next-line: unused-local
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(0)
-        local buffers = vim.api.nvim_list_bufs()
-        local children = {}
-        for _, buf in ipairs(buffers) do
-            if vim.fn.buflisted(buf) ~= 0 and vim.bo[buf].filetype ~= "qf" then
-                table.insert(children, M.buffer(buf))
-            end
-        end
-        return children
-    end
-    ):child_sep(" "),
+M.buffers = Builder({
+    hl        = "TblSectionC",
+    child_sep = " ",
+    children  = {
+        Builder({
+            text = "Buffers",
+            hl = function () return require("ui.statusline").mode_info().hl end,
+            before = " ",
+            after =
+            " ",
+        }),
+        Builder({
+            children = function ()
+                local kids = {}
+                for _, b in ipairs(vim.api.nvim_list_bufs()) do
+                    if vim.fn.buflisted(b) ~= 0 and vim.bo[b].filetype ~= "qf" then
+                        table.insert(kids, M.buffer(b))
+                    end
+                end
+                return kids
+            end,
+            child_sep = " ",
+        }),
+    },
 })
 
-function M.tab(tabpage)
-    return Part()
-        :before(" ")
-        :cache(function (_, shared)
-            shared.tabpage_cur_str = (vim.fn.tabpagenr() == tabpage) and "Current" or ""
-        end)
-        :children({
-            Part()
-                :text(tostring(tabpage))
-                :hl(function (_, shared)
-                    return string.format("Tbl%stab", shared.tabpage_cur_str)
-                end)
-                :on_click("v:lua.click_handlers.click_tab", tabpage),
-            Part("󰖭")
-                :before(" "):after(" ")
-                :hl(function (_, shared)
-                    return string.format("Tbl%sTabCloseButton", shared.tabpage_cur_str)
-                end)
-                :on_click("v:lua.click_handlers.click_close_tab", tabpage),
-        }):hl(function (_, shared)
-            return string.format("Tbl%sTab", shared.tabpage_cur_str)
-        end)
+---@param tp integer
+function M.tab(tp)
+    local cur = (vim.fn.tabpagenr() == tp)
+    local tab_hl = cur and "TblCurrentTab" or "TblTab"
+    local num_hl = tab_hl
+
+    return Builder({
+        before   = " ",
+        hl       = tab_hl,
+        children = {
+            Builder({
+                text           = tostring(tp),
+                hl             = num_hl,
+                on_click       = "v:lua.click_handlers.click_tab",
+                on_click_param = tostring(tp),
+            }),
+            Builder({
+                text           = "󰖭",
+                before         = " ",
+                after          = " ",
+                hl             = cur and "TblCurrentTabCloseButton" or "TblTabCloseButton",
+                on_click       = "v:lua.click_handlers.click_close_tab",
+                on_click_param = tostring(tp),
+            }),
+        },
+    })
 end
 
-M.tabs = Part()
-    :children({
-        Part():after(" "):children(
-            function ()
-                local tabpages = vim.api.nvim_list_tabpages()
-                local children = {}
-                for _, tabpage in ipairs(tabpages) do
-                    table.insert(children, M.tab(tabpage))
+M.tabs = Builder({
+    hl        = "TblSectionC",
+    child_sep = " ",
+    children  = {
+        Builder({
+            children = function ()
+                local kids = {}
+                for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
+                    table.insert(kids, M.tab(tp))
                 end
-                return children
-            end
-        ):child_sep(" "):hl("TblSectionC"),
-        Part("Tabs"):cache(mode.data.cache):hl(mode.data.hl):before(" "):after(" "),
-    })
-    :hl("TblSectionC")
+                return kids
+            end,
+            child_sep = " ",
+        }),
+        Builder({
+            text = "Tabs",
+            hl = function () return require("ui.statusline").mode_info().hl end,
+            before = " ",
+            after =
+            " ",
+        }),
+    },
+})
 
-M.whole = Part():hl("TblSectionC"):children({
-    M.buffers,
-    Part("%="):hl("StlSectionC"),
-    M.tabs,
+M.whole = Builder({
+    children = {
+        M.buffers,
+        Builder({ text = "%=" }),
+        M.tabs,
+    },
 })
 
 return M

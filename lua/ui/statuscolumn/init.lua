@@ -1,6 +1,7 @@
 local utf8sub = require("utils").utf8sub
 local foldexpr = require("utils").foldexpr
-local Part = require("ui.lib.linepart")
+local Part = require("part")
+local Builder = Part.Builder
 
 local M = {}
 
@@ -32,39 +33,29 @@ function M.init_window_cache(win)
     local ns_ids = vim.api.nvim_get_namespaces()
     for line = win_cache.first_line, win_cache.last_line do
         win_cache.lines[line] = {}
-        for _, ns_id in pairs(ns_ids) do
-            win_cache.lines[line][ns_id] = {}
-        end
     end
 
-    for _, ns_id in pairs(ns_ids) do
-        for _, sign in ipairs(vim.api.nvim_buf_get_extmarks(
-            buf, ns_id,
-            { win_cache.first_line - 1, 0 },
-            { win_cache.last_line - 1, -1 },
-            { type = "sign", details = true }
-        )) do
-            table.insert(win_cache.lines[sign[2] + 1][ns_id], sign)
-        end
+    local extmarks = vim.api.nvim_buf_get_extmarks(
+        buf, -1,
+        { win_cache.first_line - 1, 0 },
+        { win_cache.last_line - 1, -1 },
+        { details = true, type = "sign" }
+    )
+    local ns_reverse = {}
+    for name, id in pairs(ns_ids) do
+        ns_reverse[id] = name
+    end
+    win_cache.ns_reverse = ns_reverse
+    local ns_populated = {}
+
+    for _, extmark in ipairs(extmarks) do
+        local id, lnum, col, details = extmark[1], extmark[2] + 1, extmark[3], extmark[4]
+        table.insert(win_cache.lines[lnum], { id = id, col = col, lnum = lnum, details = details })
+        ns_populated[details.ns_id] = ns_populated[details.ns_id] ~= false
     end
 
-    local empty_ns_lines = {}
-    for line = win_cache.first_line, win_cache.last_line do
-        for _, ns_id in pairs(ns_ids) do
-            local ns_cache = win_cache.lines[line][ns_id]
-            empty_ns_lines[ns_id] = empty_ns_lines[ns_id] or 0
-            if #ns_cache == 0 then
-                empty_ns_lines[ns_id] = empty_ns_lines[ns_id] + 1
-            end
-        end
-    end
-    win_cache.ns_empty = {}
-    for _, ns_id in pairs(ns_ids) do
-        local visible_lines = win_cache.last_line - win_cache.first_line + 1
-        local is_ns_emtpy = empty_ns_lines[ns_id] >= visible_lines
-        win_cache.ns_empty[ns_id] = is_ns_emtpy
-    end
     win_cache.ns_ids = ns_ids
+    win_cache.ns_populated = ns_populated
 
     local infos = {}
     for line = win_cache.first_line, win_cache.last_line do
@@ -87,9 +78,159 @@ function M.init_window_cache(win)
         win_cache.folds.current.last = line
     end
     win_cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
+
+    local number_column = Builder({
+        ---@param self Part.instance
+        ---@return string
+        build_string = function (self)
+            local lnum = self.args.lnum
+            local text = string.rep(" ", win_cache.numberwidth or 0)
+            if vim.v.virtnum == 0 and win_cache.numberwidth and win_cache.numberwidth > 0 then
+                local number
+                if vim.wo[vim.g.statusline_winid].number and vim.wo[vim.g.statusline_winid].relativenumber then
+                    number = (vim.v.relnum == 0) and lnum or vim.v.relnum
+                elseif vim.wo[vim.g.statusline_winid].number then
+                    number = lnum
+                elseif vim.wo[vim.g.statusline_winid].relativenumber then
+                    number = vim.v.relnum
+                end
+                if number then
+                    text = string.format(
+                        "%" .. ((vim.v.relnum == 0) and "-" or "") .. win_cache.numberwidth .. "d",
+                        number)
+                end
+            end
+            self.text = text
+
+            if vim.v.relnum == 0 and vim.wo[vim.g.statusline_winid].relativenumber then
+                self.hl = "StcCurrentLineNumber"
+            else
+                self.hl = "StcLineNumber"
+            end
+            return Part.Instance.build_string(self, nil)
+        end,
+        on_click = "v:lua.click_handlers.click_line",
+    })
+
+    local fold_column = Part.Builder({
+        build_string = function (self)
+            local fillchars = vim.opt.fillchars:get()
+            local char_closed = fillchars.foldclose or "+"
+            local char_open = fillchars.foldopen or "-"
+            local char_sep = fillchars.foldsep or " "
+            local lnum = vim.v.lnum
+
+            local info = win_cache and win_cache.folds and win_cache.folds.infos and win_cache.folds.infos[lnum]
+            local current = win_cache and win_cache.folds and win_cache.folds.current
+
+            local text = " "
+            local hl = "StcFold"
+
+            if info and info.level >= 1 then
+                local is_start = info.start == lnum
+                local is_closed = info.lines > 0
+                if is_start then
+                    text = is_closed and char_closed or char_open
+                else
+                    text = char_sep
+                end
+
+                if current and current.level >= 1 and lnum >= current.first and lnum <= current.last then
+                    hl = "StcFoldCurrent"
+                end
+            end
+            self.text = text
+            self.hl = hl
+            return Part.Instance.build_string(self)
+        end,
+        on_click = "v:lua.click_handlers.click_fold",
+    })
+
+    win_cache.placed_signs = {}
+    local sign_col_id = 0
+
+    local function signs(opts)
+        sign_col_id = sign_col_id + 1
+        local col_id = sign_col_id
+        win_cache.placed_signs[col_id] = {}
+
+        return Part.Builder({
+            ctx = function (args)
+                local lnum = args.lnum
+                local extmark = vim.iter(win_cache.lines[lnum] or {})
+                    :filter(function (mark)
+                        local ns = win_cache.ns_reverse[mark.details.ns_id]
+                        return ((not opts.filter) or opts.filter(ns))
+                            and mark.details.sign_text
+                    end)
+                    :fold(nil, function (acc, cur)
+                        if not acc
+                            or acc.details.priority < cur.details.priority
+                            or (acc.details.priority == cur.details.priority
+                                and acc.details.ns_id < cur.details.ns_id) then
+                            acc = cur
+                        end
+                        return acc
+                    end)
+                win_cache.placed_signs[col_id][lnum] = extmark ~= nil
+                return extmark
+            end,
+            build_string = function (self)
+                local width = opts.width or 2
+                local fill_char = opts.fill_char or " "
+                local extmark = self.ctx
+                local text = extmark and utf8sub(extmark.details.sign_text, 1, width)
+                    or fill_char:rep(width)
+
+                self.hl = extmark and extmark.details.sign_hl_group or nil
+                self.text = (opts.auto_hide and win_cache.empty_sign_columns[col_id])
+                    and "" or text
+            end,
+        })
+    end
+
+    local builder = Builder({
+        children = {
+            signs({
+                filter = function (name)
+                    return not (name:find("diagnostic%.signs")
+                        or name:match("gitsigns_signs.*"))
+                end,
+                auto_hide = true,
+            }),
+            signs({
+                filter = function (name) return name:match("diagnostic%.signs") end,
+            }),
+            fold_column,
+            number_column,
+            signs({ filter = function (name) return name:match("gitsigns_signs_.*") end, width = 1 }),
+        },
+    })
+
+    win_cache.instances = {}
+    win_cache.empty_sign_columns = {}
+
+    for i = win_cache.first_line, win_cache.last_line do
+        local l = i
+        win_cache.instances[i] = builder:instanciate({ lnum = l })
+    end
+    for i = 1, sign_col_id do
+        local has_sign = false
+        for _, v in pairs(win_cache.placed_signs[i]) do
+            if v then
+                has_sign = true
+                break
+            end
+        end
+        if not has_sign then
+            win_cache.empty_sign_columns[i] = true
+        end
+    end
+
     return win_cache
 end
 
+_G.click_handlers = _G.click_handlers or {}
 ---@diagnostic disable-next-line: unused-local, duplicate-set-field
 function _G.click_handlers.click_line(minwid, num_clicks, btn, mods)
     local mouse = vim.fn.getmousepos()
@@ -101,9 +242,9 @@ function _G.click_handlers.click_fold(minwid, clicks, button, mods)
     local mouse = vim.fn.getmousepos()
     local win = mouse.winid
     local lnum = mouse.line
-    local fold_str = foldexpr(lnum, win)
+    local fold_info = foldexpr(lnum, win)
 
-    if fold_str:match("^>%d+") then
+    if fold_info.start == lnum then
         if vim.fn.foldclosed(lnum) == -1 then
             vim.cmd(lnum .. "foldclose")
         else
@@ -114,152 +255,8 @@ function _G.click_handlers.click_fold(minwid, clicks, button, mods)
     end
 end
 
-local number_column = Part()
-    :cache(function (lcache, shared)
-        lcache.is_focused = shared.win == vim.api.nvim_get_current_win()
-        lcache.show_relative = lcache.is_focused and vim.wo[shared.win].relativenumber
-    end)
-    ---@diagnostic disable-next-line: unused-local
-    :text(function (lcache, shared)
-        local text = string.rep(" ", shared.win_cache.numberwidth or 0)
-        if vim.v.virtnum == 0 and shared.win_cache.numberwidth and shared.win_cache.numberwidth > 0 then
-            local number
-            if vim.wo[shared.win].number and vim.wo[shared.win].relativenumber then
-                number = (vim.v.relnum == 0) and vim.v.lnum or vim.v.relnum
-            elseif vim.wo[shared.win].number then
-                number = vim.v.lnum
-            elseif vim.wo[shared.win].relativenumber then
-                number = vim.v.relnum
-            end
-            if number then
-                text = string.format("%" .. ((vim.v.relnum == 0) and "-" or "") .. shared.win_cache.numberwidth .. "d",
-                    number)
-            end
-        end
-        return text
-    end)
-    ---@diagnostic disable-next-line: unused-local
-    :hl(function (lcache, shared)
-        if vim.v.relnum == 0 and vim.wo[shared.win].relativenumber then
-            return "StcCurrentLineNumber"
-        else
-            return "StcLineNumber"
-        end
-    end)
-    :on_click("v:lua.click_handlers.click_line")
-    :name("number_column")
-
-local fold_column = Part()
-    ---@diagnostic disable-next-line: unused-local
-    :cache(function (lcache, shared)
-        local win_cache = shared.win_cache
-        local lnum = vim.v.lnum
-        local fillchars = vim.opt.fillchars:get()
-        local char_closed = fillchars.foldclose or "+"
-        local char_open = fillchars.foldopen or "-"
-        local char_sep = fillchars.foldsep or " "
-
-        local info = win_cache and win_cache.folds and win_cache.folds.infos and win_cache.folds.infos[lnum]
-        local current = win_cache and win_cache.folds and win_cache.folds.current
-
-        local text = " "
-        local hl = "StcFold"
-
-        if info and info.level >= 1 then
-            local is_start = info.start == lnum
-            local is_closed = info.lines > 0
-            if is_start then
-                text = is_closed and char_closed or char_open
-            else
-                text = char_sep
-            end
-
-            if current and current.level >= 1 and lnum >= current.first and lnum <= current.last then
-                hl = "StcFoldCurrent"
-            end
-        end
-        lcache.text = text
-        lcache.hl = hl
-    end)
-    :text(function (lcache) return lcache.text end)
-    :hl(function (lcache) return lcache.hl end)
-    :on_click("v:lua.click_handlers.click_fold")
-    :name("fold_column")
-
-local function signs(opts)
-    return Part()
-        ---@diagnostic disable-next-line: unused-local
-        :cache(function (lcache, shared)
-            for k, v in pairs(opts) do
-                lcache[k] = v
-            end
-            local width = lcache.width or 2
-            local hide_empty = lcache.hide_empty or false
-            local fill_char = lcache.fill_char or " "
-            local ns_ids = vim.iter(shared.win_cache.ns_ids or vim.api.nvim_get_namespaces())
-                :map(function (name, id)
-                    if (lcache.filter == nil) or lcache.filter(name) then return id end
-                end)
-                :totable()
-            if hide_empty and vim.iter(ns_ids):all(function (ns_id)
-                    return shared.win_cache.ns_empty and shared.win_cache.ns_empty[ns_id] and
-                        shared.win_cache.ns_empty[ns_id]
-                end) then
-                width = 0
-            end
-            local extmarks = vim.iter(ns_ids)
-                :map(function (ns_id)
-                    return shared.win_cache.lines and shared.win_cache.lines[vim.v.lnum] and
-                        shared.win_cache.lines[vim.v.lnum][ns_id]
-                end)
-                :flatten()
-                :totable()
-            local extmark = vim.iter(extmarks)
-                :fold({ [4] = { priority = 0 } }, function (acc, cur)
-                    if acc[4].priority < cur[4].priority
-                        or (acc[4].priority == cur[4].priority and acc[4].ns_id < cur[4].ns_id) then
-                        acc = cur
-                    end
-                    return acc
-                end)
-            local text = (fill_char):rep(width)
-            if extmark and extmark[4] and extmark[4].sign_text then
-                text = utf8sub(extmark[4].sign_text, 1, width)
-            end
-            lcache.text = text
-            lcache.hl = extmark[4].sign_hl_group
-        end)
-        ---@diagnostic disable-next-line: unused-local
-        :text(function (lcache, shared)
-            return lcache.text
-        end)
-        ---@diagnostic disable-next-line: unused-local
-        :hl(function (lcache, shared)
-            return lcache.hl
-        end)
+function M.get(win, line)
+    return cache[win] and cache[win].instances and cache[win].instances[line]
 end
 
-
-M.whole = Part():cache(function (_, shared)
-    shared.win = vim.g.statusline_winid
-    shared.win_cache = cache[shared.win]
-end):children({
-    signs({
-        filter = function (name)
-            return not (name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs")
-                or name:match("gitsigns_signs.*"))
-        end,
-        hide_empty = true,
-    }):name("other_signs"),
-    signs({ filter = function (name) return name:match("vim%.lsp%..+%..+[%.%/]diagnostic[%.%/]signs") end }):name(
-        "lsp_signs"),
-    fold_column,
-    number_column,
-    signs({
-        filter = function (name) return name:match("gitsigns_signs_.*") end,
-        width = 1,
-    }):name("git_signs"),
-}):name("whole")
-
-M.init_cache()
 return M

@@ -23,7 +23,6 @@ local total_redraws = 0
 function StatusColumn()
     local start = vim.uv.hrtime()
     local tick = ffi.C.display_tick
-    local eval_start = vim.uv.hrtime()
     if tick ~= last_tick then
         total_redraws = total_redraws + 1
         last_tick = tick
@@ -31,7 +30,12 @@ function StatusColumn()
         stc.init_cache()
         total_cache_time_ns = total_cache_time_ns + (vim.uv.hrtime() - cache_start)
     end
-    local res = stc.whole:eval()
+    local res = ""
+    local line = stc.get(vim.g.statusline_winid, vim.v.lnum)
+    local eval_start = vim.uv.hrtime()
+    if line then
+        res = line:build_string()
+    end
     local eval_duration = vim.uv.hrtime() - eval_start
     total_eval_time_ns = total_eval_time_ns + eval_duration
 
