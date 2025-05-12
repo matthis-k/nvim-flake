@@ -1,4 +1,5 @@
 local utils       = require("utils")
+local devicons    = require("nvim-web-devicons")
 
 local Part        = require("part")
 local Builder     = Part.Builder
@@ -54,51 +55,73 @@ local M = {}
 
 ---@param buf integer
 function M.buffer(buf)
-    local cur   = (vim.api.nvim_get_current_buf() == buf)
-    local fname = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
-    if fname == "" then fname = "[No Name]" end
+    return Part.Builder({
+        ctx       = function ()
+            local cur   = vim.api.nvim_get_current_buf() == buf
+            local fname = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
+            if fname == "" then fname = "[No Name]" end
 
-    return Builder({
-        before   = " ",
-        hl       = cur and "TblCurrentBuffer" or "TblBuffer",
-        children = {
-            Builder({ text = fname, hl = cur and "TblCurrentFilename" or "TblFilename" }),
+            local icon, icon_hl = devicons.get_icon(fname, vim.fn.fnamemodify(fname, ":e"), { default = true })
+            icon                = icon or ""
+            icon_hl             = icon_hl or "Normal"
 
-            Builder({
+            return {
+                cur     = cur,
+                buf     = buf,
+                fname   = fname,
+                icon    = icon,
+                icon_hl = icon_hl,
+            }
+        end,
+
+        before    = " ",
+        hl        = function (_, ctx) return ctx.cur and "TblCurrentBuffer" or "TblBuffer" end,
+
+        child_sep = " ",
+        children  = function (_, ctx)
+            local diagnostics_part = Part.Builder({
+                ctx       = ctx,
                 before    = " ",
                 child_sep = " ",
-                children  = function ()
-                    local out = {}
-                    local severities = {
+                children  = function (_, dctx)
+                    local out, b = {}, dctx.buf
+                    local sev_cfg = {
                         { sev = vim.diagnostic.severity.ERROR, name = "DiagnosticSignError", sym = "E", hl = "DiagnosticError" },
                         { sev = vim.diagnostic.severity.WARN,  name = "DiagnosticSignWarn",  sym = "W", hl = "DiagnosticWarn" },
                         { sev = vim.diagnostic.severity.INFO,  name = "DiagnosticSignInfo",  sym = "I", hl = "DiagnosticInfo" },
                         { sev = vim.diagnostic.severity.HINT,  name = "DiagnosticSignHint",  sym = "H", hl = "DiagnosticHint" },
                     }
-                    for _, s in ipairs(severities) do
-                        local n = #vim.diagnostic.get(buf, { severity = s.sev })
+                    for _, s in ipairs(sev_cfg) do
+                        local n = #vim.diagnostic.get(b, { severity = s.sev })
                         if n > 0 then
                             local sign = get_sign(s.name, s.sym)
-                            table.insert(out,
-                                Builder({
-                                    text = string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)),
-                                    hl = (cur and "TblCurrent" or "Tbl") .. s.hl,
-                                }))
+                            table.insert(out, Part.Builder({
+                                text = string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)),
+                                hl   = (dctx.cur and "TblCurrent" or "Tbl") .. s.hl,
+                            }))
                         end
                     end
                     return out
                 end,
-            }),
+            })
 
-            Builder({
-                text           = "󰖭",
-                before         = " ",
-                after          = " ",
-                hl             = cur and "TblCurrentCloseButton" or "TblCloseButton",
-                on_click       = "v:lua.click_handlers.click_close_buffer",
-                on_click_param = tostring(buf),
-            }),
-        },
+            return {
+                Part.Builder({ hl = ctx.icon_hl, text = ctx.icon }),
+                Part.Builder({
+                    hl   = ctx.cur and "TblCurrentFilename" or "TblFilename",
+                    text = ctx.fname,
+                }),
+                diagnostics_part,
+                Part.Builder({
+                    text           = "󰖭",
+                    before         = " ",
+                    after          = " ",
+                    hl             = ctx.cur and "TblCurrentCloseButton" or "TblCloseButton",
+                    on_click       = "v:lua.click_handlers.click_close_buffer",
+                    on_click_param = tostring(ctx.buf),
+                }),
+            }
+        end,
     })
 end
 

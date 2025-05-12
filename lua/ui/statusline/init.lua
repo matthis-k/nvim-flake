@@ -1,10 +1,11 @@
-local utils   = require("utils")
+local utils    = require("utils")
+local devicons = require("nvim-web-devicons")
 
-local Part    = require("part")
-local Builder = Part.Builder
-local M       = {}
+local Part     = require("part")
+local Builder  = Part.Builder
+local M        = {}
 
-local modes   = {
+local modes    = {
     ["n"]   = { text = "NORMAL", hl = "StlModeNormal" },
     ["no"]  = { text = "O‑PENDING", hl = "StlModeNormal" },
     ["nov"] = { text = "O‑PENDING", hl = "StlModeNormal" },
@@ -158,20 +159,45 @@ Git.all = Builder({
     child_sep = " ",
 })
 
-M.filename = Builder({
-    hl   = "StlSectionB",
-    text = function ()
+M.filename = Part.Builder({
+    ctx = function ()
         local file = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":.")
-        if file == "" then return "[No Name]" end
-        if #file > 70 then
+        if file == "" then file = "[No Name]" end
+
+        if #file > 70 and file ~= "[No Name]" then
             local fname = vim.fn.fnamemodify(file, ":t")
             local dir   = vim.fn.fnamemodify(file, ":h")
             local parts = vim.split(dir, "/")
-            if #parts > 3 then parts = { parts[1], "...", parts[#parts - 1], parts[#parts] } end
-            for i, p in ipairs(parts) do if #p > 5 then parts[i] = p:sub(1, 5) .. "…" end end
+            if #parts > 3 then
+                parts = { parts[1], "...", parts[#parts - 1], parts[#parts] }
+            end
+            for i, p in ipairs(parts) do
+                if #p > 5 then parts[i] = p:sub(1, 5) .. "…" end
+            end
             file = table.concat(parts, "/") .. "/" .. fname
         end
-        return file
+
+        local icon, hl = devicons.get_icon(
+            file, vim.fn.expand("%:e"), { default = true }
+        )
+        return {
+            icon     = icon or "",
+            icon_hl  = hl or "Normal",
+            filepath = file,
+        }
+    end,
+    child_sep = " ",
+    children = function (_, c)
+        return {
+            Part.Builder({
+                hl   = c.icon_hl,
+                text = c.icon,
+            }),
+            Part.Builder({
+                hl   = "StlSectionB",
+                text = c.filepath,
+            }),
+        }
     end,
 })
 

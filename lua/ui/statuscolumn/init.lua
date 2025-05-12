@@ -3,6 +3,8 @@ local foldexpr = require("utils").foldexpr
 local Part = require("part")
 local Builder = Part.Builder
 
+local prof = require("profiler")("statusscolumn")
+
 local M = {}
 
 local cache = {}
@@ -17,6 +19,7 @@ function M.init_cache()
 end
 
 function M.init_window_cache(win)
+    prof:start("options")
     local win_cache = {}
     win_cache.lines = {}
     win_cache.first_line = vim.fn.line("w0", win)
@@ -29,6 +32,8 @@ function M.init_window_cache(win)
     else
         win_cache.numberwidth = 0
     end
+    prof:stop("options")
+    prof:start("extmarks")
     local buf = vim.api.nvim_win_get_buf(win)
     local ns_ids = vim.api.nvim_get_namespaces()
     for line = win_cache.first_line, win_cache.last_line do
@@ -56,6 +61,8 @@ function M.init_window_cache(win)
 
     win_cache.ns_ids = ns_ids
     win_cache.ns_populated = ns_populated
+    prof:stop("extmarks")
+    prof:start("folds")
 
     local infos = {}
     for line = win_cache.first_line, win_cache.last_line do
@@ -78,6 +85,7 @@ function M.init_window_cache(win)
         win_cache.folds.current.last = line
     end
     win_cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
+    prof:stop("folds")
 
     local number_column = Builder({
         ---@param self Part.instance
@@ -207,12 +215,15 @@ function M.init_window_cache(win)
         },
     })
 
+    prof:start("instaciation")
     win_cache.instances = {}
     win_cache.empty_sign_columns = {}
 
     for i = win_cache.first_line, win_cache.last_line do
         local l = i
+        prof:start("single_instance")
         win_cache.instances[i] = builder:instanciate({ lnum = l })
+        prof:stop("single_instance")
     end
     for i = 1, sign_col_id do
         local has_sign = false
@@ -226,6 +237,7 @@ function M.init_window_cache(win)
             win_cache.empty_sign_columns[i] = true
         end
     end
+    prof:stop("instaciation")
 
     return win_cache
 end
@@ -257,6 +269,10 @@ end
 
 function M.get(win, line)
     return cache[win] and cache[win].instances and cache[win].instances[line]
+end
+
+function PROFILESTC()
+    prof:report()
 end
 
 return M
