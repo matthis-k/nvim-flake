@@ -1,5 +1,7 @@
 local tabwidth = 4
 
+vim.loader.enable("true")
+
 vim.g.mapleader = require("keymaps").leader
 vim.g.maplocalleader = require("keymaps").leader
 
