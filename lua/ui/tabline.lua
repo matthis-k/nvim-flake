@@ -1,24 +1,23 @@
-local utils       = require("utils")
-local devicons    = require("nvim-web-devicons")
+local utils = require("utils")
+local devicons = require("nvim-web-devicons")
 
-local Part        = require("part")
-local Builder     = Part.Builder
+local PROF_NAME = "tabline"
 
 _G.click_handlers = _G.click_handlers or {}
 
----@diagnostic disable-next-line: duplicate-set-field,unused-local
+---@diagnostic disable-next-line: unused-local
 function _G.click_handlers.click_buffer(minwid, _num_clicks, _btn, _mods)
-    local buf = tonumber(minwid)
+    local buf = tonumber(minwid) or 0
     local win = vim.iter(vim.api.nvim_tabpage_list_wins(0))
         :find(function (w) return vim.api.nvim_win_get_buf(w) == buf end)
     if win then
         vim.api.nvim_set_current_win(win)
     else
-        vim.api.nvim_set_current_buf(buf)
+        vim.api.nvim_set_current_buf(math.floor(buf))
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field,unused-local
+---@diagnostic disable-next-line: unused-local
 function _G.click_handlers.click_close_buffer(minwid, _num_clicks, _btn, _mods)
     local buf = tonumber(minwid)
     if buf and vim.api.nvim_buf_is_valid(buf) then
@@ -27,7 +26,7 @@ function _G.click_handlers.click_close_buffer(minwid, _num_clicks, _btn, _mods)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field,unused-local
+---@diagnostic disable-next-line: unused-local
 function _G.click_handlers.click_tab(minwid, _num_clicks, _btn, _mods)
     local tp = tonumber(minwid)
     if tp and vim.api.nvim_tabpage_is_valid(tp) then
@@ -35,7 +34,7 @@ function _G.click_handlers.click_tab(minwid, _num_clicks, _btn, _mods)
     end
 end
 
----@diagnostic disable-next-line: duplicate-set-field,unused-local
+---@diagnostic disable-next-line: unused-local
 function _G.click_handlers.click_close_tab(minwid, _num_clicks, _btn, _mods)
     local tp = tonumber(minwid)
     if tp and vim.api.nvim_tabpage_is_valid(tp) then
@@ -45,46 +44,56 @@ function _G.click_handlers.click_close_tab(minwid, _num_clicks, _btn, _mods)
 end
 
 local function get_sign(name, fallback, texthl)
-    local sign  = vim.fn.sign_getdefined(name)[1] or {}
-    sign.text   = (sign.text ~= "") and sign.text or fallback
+    local sign = vim.fn.sign_getdefined(name)[1] or {}
+    sign.text = (sign.text ~= "") and sign.text or fallback
     sign.texthl = (sign.texthl ~= "") and sign.texthl or texthl
     return sign
 end
 
 local M = {}
 
----@param buf integer
-function M.buffer(buf)
-    return Part.Builder({
-        ctx       = function ()
-            local cur   = vim.api.nvim_get_current_buf() == buf
+local cache = {}
+
+function M.init_cache()
+    cache = {}
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.fn.buflisted(buf) ~= 0 and vim.bo[buf].filetype ~= "qf" then
             local fname = vim.fn.fnamemodify(vim.fn.bufname(buf), ":t")
             if fname == "" then fname = "[No Name]" end
 
             local icon, icon_hl = devicons.get_icon(fname, vim.fn.fnamemodify(fname, ":e"), { default = true })
-            icon                = icon or ""
-            icon_hl             = icon_hl or "Normal"
+            icon = icon or ""
+            icon_hl = icon_hl or "Normal"
 
-            return {
-                cur     = cur,
-                buf     = buf,
-                fname   = fname,
-                icon    = icon,
+            cache[buf] = {
+                cur = (vim.api.nvim_get_current_buf() == buf),
+                fname = fname,
+                icon = icon,
                 icon_hl = icon_hl,
             }
-        end,
+        end
+    end
+end
 
-        before    = " ",
-        hl        = function (_, ctx) return ctx.cur and "TblCurrentBuffer" or "TblBuffer" end,
-
-        child_sep = " ",
-        children  = function (_, ctx)
-            local diagnostics_part = Part.Builder({
-                ctx       = ctx,
-                before    = " ",
+function M.buffer(buf)
+    local ctx = cache[buf] or {}
+    return {
+        prof_name = PROF_NAME,
+        name = "buffer",
+        before = " ",
+        hl = ctx.cur and "TblCurrentBuffer" or "TblBuffer",
+        children = {
+            { hl = ctx.icon_hl, text = ctx.icon },
+            {
+                before = " ",
+                hl = ctx.cur and "TblCurrentFilename" or "TblFilename",
+                text = ctx.fname,
+            },
+            {
+                before = " ",
                 child_sep = " ",
-                children  = function (_, dctx)
-                    local out, b = {}, dctx.buf
+                children = (function ()
+                    local out = {}
                     local sev_cfg = {
                         { sev = vim.diagnostic.severity.ERROR, name = "DiagnosticSignError", sym = "E", hl = "DiagnosticError" },
                         { sev = vim.diagnostic.severity.WARN,  name = "DiagnosticSignWarn",  sym = "W", hl = "DiagnosticWarn" },
@@ -92,98 +101,93 @@ function M.buffer(buf)
                         { sev = vim.diagnostic.severity.HINT,  name = "DiagnosticSignHint",  sym = "H", hl = "DiagnosticHint" },
                     }
                     for _, s in ipairs(sev_cfg) do
-                        local n = #vim.diagnostic.get(b, { severity = s.sev })
+                        local n = #vim.diagnostic.get(buf, { severity = s.sev })
                         if n > 0 then
                             local sign = get_sign(s.name, s.sym)
-                            table.insert(out, Part.Builder({
+                            table.insert(out, {
                                 text = string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)),
-                                hl   = (dctx.cur and "TblCurrent" or "Tbl") .. s.hl,
-                            }))
+                                hl = (ctx.cur and "TblCurrent" or "Tbl") .. s.hl,
+                            })
                         end
                     end
                     return out
-                end,
-            })
-
-            return {
-                Part.Builder({ hl = ctx.icon_hl, text = ctx.icon }),
-                Part.Builder({
-                    hl   = ctx.cur and "TblCurrentFilename" or "TblFilename",
-                    text = ctx.fname,
-                }),
-                diagnostics_part,
-                Part.Builder({
-                    text           = "󰖭",
-                    before         = " ",
-                    after          = " ",
-                    hl             = ctx.cur and "TblCurrentCloseButton" or "TblCloseButton",
-                    on_click       = "v:lua.click_handlers.click_close_buffer",
-                    on_click_param = tostring(ctx.buf),
-                }),
-            }
-        end,
-    })
+                end)(),
+            },
+            {
+                text = "󰖭",
+                before = " ",
+                after = " ",
+                hl = ctx.cur and "TblCurrentCloseButton" or "TblCloseButton",
+                on_click = "v:lua.click_handlers.click_close_buffer",
+                on_click_param = tostring(buf),
+            },
+        },
+    }
 end
 
-M.buffers = Builder({
-    hl        = "TblSectionC",
+M.buffers = {
+    prof_name = PROF_NAME,
+    name = "buffers",
+    hl = "TblSectionC",
     child_sep = " ",
-    children  = {
-        Builder({
+    children = {
+        {
             text = "Buffers",
             hl = function () return require("ui.statusline").mode_info().hl end,
             before = " ",
-            after =
-            " ",
-        }),
-        Builder({
+            after = " ",
+        },
+        {
             children = function ()
                 local kids = {}
                 for _, b in ipairs(vim.api.nvim_list_bufs()) do
-                    if vim.fn.buflisted(b) ~= 0 and vim.bo[b].filetype ~= "qf" then
+                    if cache[b] then
                         table.insert(kids, M.buffer(b))
                     end
                 end
                 return kids
             end,
             child_sep = " ",
-        }),
+        },
     },
-})
+}
 
----@param tp integer
 function M.tab(tp)
     local cur = (vim.fn.tabpagenr() == tp)
     local tab_hl = cur and "TblCurrentTab" or "TblTab"
     local num_hl = tab_hl
 
-    return Builder({
-        before   = " ",
-        hl       = tab_hl,
+    return {
+        prof_name = PROF_NAME,
+        name = "tab",
+        before = " ",
+        hl = tab_hl,
         children = {
-            Builder({
-                text           = tostring(tp),
-                hl             = num_hl,
-                on_click       = "v:lua.click_handlers.click_tab",
+            {
+                text = tostring(tp),
+                hl = num_hl,
+                on_click = "v:lua.click_handlers.click_tab",
                 on_click_param = tostring(tp),
-            }),
-            Builder({
-                text           = "󰖭",
-                before         = " ",
-                after          = " ",
-                hl             = cur and "TblCurrentTabCloseButton" or "TblTabCloseButton",
-                on_click       = "v:lua.click_handlers.click_close_tab",
+            },
+            {
+                text = "󰖭",
+                before = " ",
+                after = " ",
+                hl = cur and "TblCurrentTabCloseButton" or "TblTabCloseButton",
+                on_click = "v:lua.click_handlers.click_close_tab",
                 on_click_param = tostring(tp),
-            }),
+            },
         },
-    })
+    }
 end
 
-M.tabs = Builder({
-    hl        = "TblSectionC",
+M.tabs = {
+    prof_name = PROF_NAME,
+    name = "tabs",
+    hl = "TblSectionC",
     child_sep = " ",
-    children  = {
-        Builder({
+    children = {
+        {
             children = function ()
                 local kids = {}
                 for _, tp in ipairs(vim.api.nvim_list_tabpages()) do
@@ -192,23 +196,24 @@ M.tabs = Builder({
                 return kids
             end,
             child_sep = " ",
-        }),
-        Builder({
+        },
+        {
             text = "Tabs",
             hl = function () return require("ui.statusline").mode_info().hl end,
             before = " ",
-            after =
-            " ",
-        }),
+            after = " ",
+        },
     },
-})
+}
 
-M.whole = Builder({
+M.whole = {
+    prof_name = PROF_NAME,
+    name = "whole",
     children = {
         M.buffers,
-        Builder({ text = "%=" }),
+        { text = "%=" },
         M.tabs,
     },
-})
+}
 
 return M

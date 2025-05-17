@@ -1,11 +1,10 @@
-local utils    = require("utils")
-local devicons = require("nvim-web-devicons")
+local utils     = require("utils")
+local devicons  = require("nvim-web-devicons")
 
-local Part     = require("part")
-local Builder  = Part.Builder
-local M        = {}
+local PROF_NAME = "statusline"
+local M         = {}
 
-local modes    = {
+local modes     = {
     ["n"]   = { text = "NORMAL", hl = "StlModeNormal" },
     ["no"]  = { text = "O‑PENDING", hl = "StlModeNormal" },
     ["nov"] = { text = "O‑PENDING", hl = "StlModeNormal" },
@@ -41,6 +40,37 @@ local modes    = {
     ["nt"]  = { text = "T‑NORMAL", hl = "StlModeTerminalNormal" },
 }
 
+local buf_cache = {}
+
+function M.init_cache()
+    buf_cache = {}
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_loaded(bufnr) then
+            local file = vim.api.nvim_buf_get_name(bufnr)
+            if file == "" then file = "[No Name]" end
+            local short = file
+            if #file > 70 and file ~= "[No Name]" then
+                local fname = vim.fn.fnamemodify(file, ":t")
+                local dir = vim.fn.fnamemodify(file, ":h")
+                local parts = vim.split(dir, "/")
+                if #parts > 3 then
+                    parts = { parts[1], "...", parts[#parts - 1], parts[#parts] }
+                end
+                for i, p in ipairs(parts) do
+                    if #p > 5 then parts[i] = p:sub(1, 5) .. "…" end
+                end
+                short = table.concat(parts, "/") .. "/" .. fname
+            end
+            local icon, hl = devicons.get_icon(file, vim.fn.fnamemodify(file, ":e"), { default = true })
+            buf_cache[bufnr] = {
+                icon = icon or "",
+                icon_hl = hl or "Normal",
+                filepath = short,
+            }
+        end
+    end
+end
+
 function M.mode_info()
     return modes[vim.api.nvim_get_mode().mode] or { text = "UNKNOWN", hl = "StlModeNormal" }
 end
@@ -54,12 +84,14 @@ end
 
 local Git     = {}
 
-M.mode        = Builder({
-    before = " ",
-    after  = " ",
-    hl     = function () return M.mode_info().hl end,
-    text   = function () return M.mode_info().text end,
-})
+M.mode        = {
+    prof_name = PROF_NAME,
+    name      = "mode",
+    before    = " ",
+    after     = " ",
+    hl        = function () return M.mode_info().hl end,
+    text      = function () return M.mode_info().text end,
+}
 
 Git.cache     = Git.cache or {}
 
@@ -89,23 +121,23 @@ if timer then
     timer:start(0, 300000, vim.schedule_wrap(Git.update))
 end
 
-Git.icon = Builder({
+Git.icon = {
     text = function ()
         return vim.b[vim.api.nvim_get_current_buf()].gitsigns_status_dict and "" or ""
     end,
     hl   = "StlGitBranch",
-})
+}
 
-Git.branch = Builder({
+Git.branch = {
     text = function ()
         local gs = vim.b[vim.api.nvim_get_current_buf()].gitsigns_status_dict
         return (gs and gs.head) or ""
     end,
     hl   = "StlGitBranch",
-})
+}
 
 local function diff_counter(key, hl)
-    return Builder({
+    return {
         hl   = hl,
         text = function ()
             local gs = vim.b[vim.api.nvim_get_current_buf()].gitsigns_status_dict
@@ -113,7 +145,7 @@ local function diff_counter(key, hl)
             return (n and n > 0) and
                 string.format("%s%d", key == "added" and "+" or (key == "removed" and "-" or "~"), n) or ""
         end,
-    })
+    }
 end
 
 Git.status = {
@@ -121,10 +153,12 @@ Git.status = {
     changed = diff_counter("changed", "StlGitChanged"),
     removed = diff_counter("removed", "StlGitDeleted"),
 }
-Git.status.all = Builder({ children = { Git.status.added, Git.status.changed, Git.status.removed } })
+Git.status.all = {
+    children = { Git.status.added, Git.status.changed, Git.status.removed },
+}
 
 local function remote_counter(dir, symbol, hl)
-    return Builder({
+    return {
         hl   = hl,
         text = function ()
             local gs = vim.b[vim.api.nvim_get_current_buf()].gitsigns_status_dict
@@ -134,13 +168,13 @@ local function remote_counter(dir, symbol, hl)
             if remote.error or not remote[dir] or remote[dir] == 0 then return "" end
             return string.format("%s%d", symbol, remote[dir])
         end,
-    })
+    }
 end
 
 Git.remote = {
     ahead  = remote_counter("ahead", "↑", "StlGitRemoteAhead"),
     behind = remote_counter("behind", "↓", "StlGitRemoteBehind"),
-    sync   = Builder({
+    sync   = {
         hl   = "StlGitBranch",
         text = function ()
             local gs = vim.b[vim.api.nvim_get_current_buf()].gitsigns_status_dict
@@ -150,65 +184,41 @@ Git.remote = {
             if r.error then return "" end
             return (r.ahead == 0 and r.behind == 0) and "✓" or ""
         end,
-    }),
+    },
 }
-Git.remote.all = Builder({ children = { Git.remote.ahead, Git.remote.behind, Git.remote.sync } })
+Git.remote.all = { children = { Git.remote.ahead, Git.remote.behind, Git.remote.sync } }
 
-Git.all = Builder({
+Git.all = {
+    prof_name = PROF_NAME,
+    name      = "git",
     children  = { Git.icon, Git.branch, Git.remote.all, Git.status.all },
     child_sep = " ",
-})
+}
 
-M.filename = Part.Builder({
-    ctx = function ()
-        local file = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":.")
-        if file == "" then file = "[No Name]" end
-
-        if #file > 70 and file ~= "[No Name]" then
-            local fname = vim.fn.fnamemodify(file, ":t")
-            local dir   = vim.fn.fnamemodify(file, ":h")
-            local parts = vim.split(dir, "/")
-            if #parts > 3 then
-                parts = { parts[1], "...", parts[#parts - 1], parts[#parts] }
-            end
-            for i, p in ipairs(parts) do
-                if #p > 5 then parts[i] = p:sub(1, 5) .. "…" end
-            end
-            file = table.concat(parts, "/") .. "/" .. fname
-        end
-
-        local icon, hl = devicons.get_icon(
-            file, vim.fn.expand("%:e"), { default = true }
-        )
-        return {
-            icon     = icon or "",
-            icon_hl  = hl or "Normal",
-            filepath = file,
-        }
-    end,
+M.filename = {
+    name = "filename",
     child_sep = " ",
-    children = function (_, c)
+    children = function ()
+        local b = buf_cache[vim.api.nvim_get_current_buf()] or {}
         return {
-            Part.Builder({
-                hl   = c.icon_hl,
-                text = c.icon,
-            }),
-            Part.Builder({
-                hl   = "StlSectionB",
-                text = c.filepath,
-            }),
+            { hl = b.icon_hl,     text = b.icon },
+            { hl = "StlSectionB", text = b.filepath },
         }
     end,
-})
+}
 
-M.modified = Builder({
-    text = function () return vim.bo.modified and "modified" or "" end,
-})
+M.modified = {
+    prof_name = PROF_NAME,
+    name      = "modified",
+    text      = function () return vim.bo.modified and "modified" or "" end,
+}
 
-M.readonly = Builder({
-    hl   = "@error",
-    text = function () return vim.bo.readonly and "readonly" or "" end,
-})
+M.readonly = {
+    prof_name = PROF_NAME,
+    name      = "readonly",
+    hl        = "@error",
+    text      = function () return vim.bo.readonly and "readonly" or "" end,
+}
 
 local diag_names = {
     [vim.diagnostic.severity.ERROR] = "DiagnosticSignError",
@@ -219,13 +229,13 @@ local diag_names = {
 
 local function diag_part(sev)
     local sign = get_sign(diag_names[sev], "?")
-    return Builder({
+    return {
         hl   = sign.texthl,
         text = function ()
             local n = #vim.diagnostic.get(0, { severity = sev })
             return (n > 0) and string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)) or ""
         end,
-    })
+    }
 end
 
 M.diagnostics = {
@@ -234,7 +244,9 @@ M.diagnostics = {
     info     = diag_part(vim.diagnostic.severity.INFO),
     hints    = diag_part(vim.diagnostic.severity.HINT),
 }
-M.diagnostics.all = Builder({
+M.diagnostics.all = {
+    prof_name = PROF_NAME,
+    name      = "diagnostics",
     children  = {
         M.diagnostics.errors,
         M.diagnostics.warnings,
@@ -242,18 +254,28 @@ M.diagnostics.all = Builder({
         M.diagnostics.hints,
     },
     child_sep = " ",
-})
+}
 
-M.pos = Builder({
-    text = function ()
+M.pos = {
+    prof_name = PROF_NAME,
+    name      = "pos",
+    text      = function ()
         return string.format("%03d:%02d", vim.fn.line("."), vim.fn.col("."))
     end,
-})
+}
 
-M.encoding = Builder({ text = function () return vim.bo.fileencoding ~= "" and vim.bo.fileencoding or "utf-8" end })
-M.filetype = Builder({ text = function () return vim.bo.filetype ~= "" and vim.bo.filetype or "none" end })
+M.encoding = {
+    prof_name = PROF_NAME,
+    name      = "encoding",
+    text      = function () return vim.bo.fileencoding ~= "" and vim.bo.fileencoding or "utf-8" end,
+}
+M.filetype = {
+    prof_name = PROF_NAME,
+    name      = "filetype",
+    text      = function () return vim.bo.filetype ~= "" and vim.bo.filetype or "none" end,
+}
 
-M.left = Builder({
+M.left = {
     hl        = "StlSectionB",
     before    = " ",
     after     = " ",
@@ -261,33 +283,35 @@ M.left = Builder({
     children  = {
         Git.all,
         M.filename,
-        Builder({ before = "[", after = "]", child_sep = " ", children = { M.modified, M.readonly } }),
+        { before = "[", after = "]", child_sep = " ", children = { M.modified, M.readonly } },
         M.diagnostics.all,
     },
-})
+}
 
-M.right = Builder({
+M.right = {
     hl        = "StlSectionB",
     before    = " ",
     after     = " ",
     child_sep = " ",
     children  = { M.filetype, M.encoding },
-})
+}
 
-M.whole = Builder({
-    hl       = "StlSectionC",
-    children = {
+M.whole = {
+    prof_name = PROF_NAME,
+    name      = "whole",
+    hl        = "StlSectionC",
+    children  = {
         M.mode,
         M.left,
-        Builder({ text = "%=" }),
+        { text = "%=" },
         M.right,
-        Builder({
+        {
             before   = " ",
             after    = " ",
             hl       = function () return M.mode_info().hl end,
             children = { M.pos },
-        }),
+        },
     },
-})
+}
 
 return M

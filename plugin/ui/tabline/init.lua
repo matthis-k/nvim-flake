@@ -1,3 +1,13 @@
+local ffi = require("ffi")
+local Part = require("part")
+
+ffi.cdef [[
+  typedef unsigned long long disptick_T;
+  extern disptick_T display_tick;
+]]
+
+local last_tick = -1
+
 if not nixCats("ui.tabline") then
     return
 end
@@ -6,22 +16,14 @@ local tabline = require("ui.tabline")
 
 ---@return string
 function TabLine()
-    return tabline.whole:instanciate():build_string()
+    local tick = ffi.C.display_tick
+    if tick ~= last_tick then
+        ---@diagnostic disable-next-line: cast-local-type
+        last_tick = tick
+        tabline.init_cache()
+    end
+    return Part.build_string(tabline.whole)
 end
 
 vim.o.tabline = "%!v:lua.TabLine()"
 vim.o.showtabline = 2
-
-vim.api.nvim_create_augroup("TablineRedraw", { clear = true })
-vim.api.nvim_create_autocmd({ "ModeChanged", "BufAdd", "BufDelete", "TabNew", "TabClosed", "DiagnosticChanged" }, {
-    group = "TablineRedraw",
-    pattern = "*",
-    callback = function ()
-        local buffers = vim.api.nvim_list_bufs()
-        if #buffers > 0 then
-            vim.cmd("redrawtabline")
-        end
-    end,
-})
-
-return M
