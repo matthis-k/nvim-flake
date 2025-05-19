@@ -86,9 +86,6 @@
             sessions = [ resession-nvim ];
             ui = {
               telescope.resession = [ pkgs.neovimPlugins.resession-telescope-nvim ];
-              telescope.enabled = [
-                telescope-file-browser-nvim
-              ];
             };
             lsp = {
               enabled = [

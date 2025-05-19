@@ -4,7 +4,6 @@ end
 local keys = {}
 if nixCats("ui.telescope.fileFinder") then
     table.insert(keys, { "<space><space>", "<cmd>Telescope find_files<cr>", desc = "Files" })
-    table.insert(keys, { "<space>e", "<cmd>Telescope file_browser<cr>", desc = "File browser" })
 end
 
 if nixCats("ui.telescope.liveSearch") then
