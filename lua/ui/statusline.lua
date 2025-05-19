@@ -1,10 +1,11 @@
-local utils     = require("utils")
-local devicons  = require("nvim-web-devicons")
+local utils       = require("utils")
+local devicons    = require("nvim-web-devicons")
 
-local PROF_NAME = "statusline"
-local M         = {}
+local M           = {}
 
-local modes     = {
+_G.click_handlers = _G.click_handlers or {}
+
+local modes       = {
     ["n"]   = { text = "NORMAL", hl = "StlModeNormal" },
     ["no"]  = { text = "O‑PENDING", hl = "StlModeNormal" },
     ["nov"] = { text = "O‑PENDING", hl = "StlModeNormal" },
@@ -40,7 +41,7 @@ local modes     = {
     ["nt"]  = { text = "T‑NORMAL", hl = "StlModeTerminalNormal" },
 }
 
-local buf_cache = {}
+local buf_cache   = {}
 
 function M.init_cache()
     buf_cache = {}
@@ -85,12 +86,11 @@ end
 local Git     = {}
 
 M.mode        = {
-    prof_name = PROF_NAME,
-    name      = "mode",
-    before    = " ",
-    after     = " ",
-    hl        = function () return M.mode_info().hl end,
-    text      = function () return M.mode_info().text end,
+    name   = "mode",
+    before = " ",
+    after  = " ",
+    hl     = function () return M.mode_info().hl end,
+    text   = function () return M.mode_info().text end,
 }
 
 Git.cache     = Git.cache or {}
@@ -189,7 +189,6 @@ Git.remote = {
 Git.remote.all = { children = { Git.remote.ahead, Git.remote.behind, Git.remote.sync } }
 
 Git.all = {
-    prof_name = PROF_NAME,
     name      = "git",
     children  = { Git.icon, Git.branch, Git.remote.all, Git.status.all },
     child_sep = " ",
@@ -208,16 +207,14 @@ M.filename = {
 }
 
 M.modified = {
-    prof_name = PROF_NAME,
-    name      = "modified",
-    text      = function () return vim.bo.modified and "modified" or "" end,
+    name = "modified",
+    text = function () return vim.bo.modified and "modified" or "" end,
 }
 
 M.readonly = {
-    prof_name = PROF_NAME,
-    name      = "readonly",
-    hl        = "@error",
-    text      = function () return vim.bo.readonly and "readonly" or "" end,
+    name = "readonly",
+    hl   = "@error",
+    text = function () return vim.bo.readonly and "readonly" or "" end,
 }
 
 local diag_names = {
@@ -245,7 +242,6 @@ M.diagnostics = {
     hints    = diag_part(vim.diagnostic.severity.HINT),
 }
 M.diagnostics.all = {
-    prof_name = PROF_NAME,
     name      = "diagnostics",
     children  = {
         M.diagnostics.errors,
@@ -257,22 +253,19 @@ M.diagnostics.all = {
 }
 
 M.pos = {
-    prof_name = PROF_NAME,
-    name      = "pos",
-    text      = function ()
+    name = "pos",
+    text = function ()
         return string.format("%03d:%02d", vim.fn.line("."), vim.fn.col("."))
     end,
 }
 
 M.encoding = {
-    prof_name = PROF_NAME,
-    name      = "encoding",
-    text      = function () return vim.bo.fileencoding ~= "" and vim.bo.fileencoding or "utf-8" end,
+    name = "encoding",
+    text = function () return vim.bo.fileencoding ~= "" and vim.bo.fileencoding or "utf-8" end,
 }
 M.filetype = {
-    prof_name = PROF_NAME,
-    name      = "filetype",
-    text      = function () return vim.bo.filetype ~= "" and vim.bo.filetype or "none" end,
+    name = "filetype",
+    text = function () return vim.bo.filetype ~= "" and vim.bo.filetype or "none" end,
 }
 
 M.left = {
@@ -297,10 +290,9 @@ M.right = {
 }
 
 M.whole = {
-    prof_name = PROF_NAME,
-    name      = "whole",
-    hl        = "StlSectionC",
-    children  = {
+    name     = "whole",
+    hl       = "StlSectionC",
+    children = {
         M.mode,
         M.left,
         { text = "%=" },

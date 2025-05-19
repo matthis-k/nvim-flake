@@ -87,3 +87,7 @@ hl.StcCurrentLineNumber      = { link = "CursorLine", gui = "bold" }
 hl.StcFold                   = { guifg = colors.base0D }
 hl.StcFoldCurrent            = { guifg = colors.base0D, guibg = colors.base02 }
 hl.StcFolded                 = { guifg = colors.base0D }
+
+
+hl.ProfileReportEven = { guibg = colors.base03, guifg = colors.base05 }
+hl.ProfileReportOdd = { guibg = colors.base02, guifg = colors.base05 }

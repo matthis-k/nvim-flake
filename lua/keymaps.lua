@@ -73,21 +73,26 @@ return {
         { "n", "<leader>e", function () require("tools.files.oil").open() end,
             { desc = "File explorer (oil)" } },
 
-        { "n", "<leader>v",  "<nop>",                    { desc = "Vim (prefix)" } },
+        { "n", "<leader>v",  "<nop>",                                      { desc = "Vim" } },
         { "n", "<leader>vv", "<cmd>cd " .. nixCats.configDir .. " | e init.lua <CR>",
             { desc = "Edit config" } },
         { "n", "<leader>vc", require("theme.color_preview").toggle,
             { desc = "Toggle color preview" } },
 
-        { "n", "<leader>q",  "<nop>",                    { desc = "Quickfix (prefix)" } },
-        { "n", "<leader>qj", "<cmd>cnext<CR>",           { desc = "Next quickfix", silent = true } },
-        { "n", "<leader>qk", "<cmd>cprev<CR>",           { desc = "Prev quickfix", silent = true } },
+        { "n", "<leader>q",  "<nop>",                                      { desc = "Quickfix" } },
+        { "n", "<leader>qj", "<cmd>cnext<CR>",                             { desc = "Next quickfix", silent = true } },
+        { "n", "<leader>qk", "<cmd>cprev<CR>",                             { desc = "Prev quickfix", silent = true } },
 
         -- add description
-        { "n", "gri",        vim.lsp.buf.implementation, { desc = "Go to implementation" } },
-        { "n", "gra",        vim.lsp.buf.code_action,    { desc = "Code action" } },
-        { "n", "grr",        vim.lsp.buf.references,     { desc = "Find references" } },
-        { "n", "grn",        vim.lsp.buf.rename,         { desc = "Rename symbol" } },
+        { "n", "gri",        vim.lsp.buf.implementation,                   { desc = "Go to implementation" } },
+        { "n", "gra",        vim.lsp.buf.code_action,                      { desc = "Code action" } },
+        { "n", "grr",        vim.lsp.buf.references,                       { desc = "Find references" } },
+        { "n", "grn",        vim.lsp.buf.rename,                           { desc = "Rename symbol" } },
+
+        { "n", "<leader>p",  "<nop>",                                      { desc = "Profiler" } },
+        { "n", "<leader>pr", function () require("profiler"):report() end, { desc = "Report" } },
+        { "n", "<leader>pp", function () require("profiler"):toggle() end, { desc = "Toggle" } },
+        { "n", "<leader>pc", function () require("profiler"):clean() end,  { desc = "Clean" } },
     },
 
     ---@type table<string, { [1]:Mode, [2]:Lhs, [3]:Rhs, [4]?:Opts }[]>

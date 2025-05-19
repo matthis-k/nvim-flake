@@ -1,5 +1,5 @@
-local Profiler = require("profiler")
 local Part = {}
+local profiler = require("profiler")
 
 
 --- Build a string from a part
@@ -20,14 +20,11 @@ function Part.build_string(part)
                 return Part.build_string(val)
             end
         end
-        return ""
+        return tostring(val or "")
     end
 
-    local prof
-    if part.name and part.prof_name then
-        prof = Profiler(part.prof_name)
-        prof:start(part.name)
-        prof:start("build_string")
+    if part.name then
+        profiler:start(part.name)
     end
 
     local hl = eval(part.hl)
@@ -68,9 +65,8 @@ function Part.build_string(part)
         click_suffix = "%T"
     end
 
-    if prof then
-        prof:stop("build_string")
-        prof:stop(part.name)
+    if part.name then
+        profiler:stop(part.name)
     end
 
     if #content > 0 then

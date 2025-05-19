@@ -1,8 +1,8 @@
 local utf8sub = require("utils").utf8sub
 local foldexpr = require("utils").foldexpr
+local profiler = require("profiler")
 
-local PROF_NAME = "statuscolumn"
-local prof = require("profiler")(PROF_NAME)
+_G.stc_click_handlers = _G.stc_click_handlers or {}
 
 local M = {}
 local cache = {}
@@ -50,7 +50,8 @@ function M.assign_sign_column(win, name, filter, width)
 end
 
 function M.init_window_cache(win)
-    prof:start("options")
+    profiler:start("cache")
+    profiler:start("options")
     cache[win] = {}
     local win_cache = cache[win]
     win_cache.lines = {}
@@ -64,26 +65,26 @@ function M.init_window_cache(win)
     else
         win_cache.numberwidth = 0
     end
-    prof:stop("options")
 
-    prof:start("extmarks")
     local buf = vim.api.nvim_win_get_buf(win)
     local ns_ids = vim.api.nvim_get_namespaces()
     win_cache.ns_reverse = {}
     for name, id in pairs(ns_ids) do
         win_cache.ns_reverse[id] = name
     end
+    profiler:stop("options")
+    profiler:start("extmarks")
+    profiler:start("fetch")
 
-    prof:start("get_extmarks")
     local extmarks = vim.api.nvim_buf_get_extmarks(
         buf, -1,
         { win_cache.first_line - 1, 0 },
         { win_cache.last_line - 1, -1 },
         { details = true, type = "sign" }
     )
-    prof:stop("get_extmarks")
+    profiler:stop()
+    profiler:start("per_line")
 
-    prof:start("line_extmarks_map")
     for _, extmark in ipairs(extmarks) do
         local lnum = extmark[2] + 1
         win_cache.lines[lnum] = win_cache.lines[lnum] or {}
@@ -94,9 +95,9 @@ function M.init_window_cache(win)
             details = extmark[4],
         })
     end
-    prof:stop("line_extmarks_map")
-    prof:stop("extmarks")
 
+    profiler:stop("per_line")
+    profiler:start("assign")
     M.assign_sign_column(win, "sign_misc", function (name)
         return not (name:find("diagnostic%.signs") or name:match("gitsigns_signs.*"))
     end, 2)
@@ -109,19 +110,24 @@ function M.init_window_cache(win)
         return name:match("gitsigns_signs_.*")
     end, 1)
 
-    prof:start("folds")
+    profiler:stop("assign")
+    profiler:stop("extmarks")
+    profiler:start("folds")
+
+    profiler:start("fetch")
     local infos = {}
     for line = win_cache.first_line, win_cache.last_line do
         infos[line] = foldexpr(line, win)
     end
     local cursor_info = infos[win_cache.cursor_line]
 
+    profiler:stop("fetch")
     win_cache.folds = {
         infos = infos,
         current = {
-            first = cursor_info.start,
+            first = cursor_info and cursor_info.start or 0,
             last = win_cache.cursor_line,
-            level = cursor_info.level or 0,
+            level = cursor_info and cursor_info.level or 0,
         },
     }
 
@@ -132,6 +138,8 @@ function M.init_window_cache(win)
     end
 
     win_cache.folds.hide = vim.api.nvim_get_option_value("foldcolumn", { win = win }) == "0"
+    profiler:stop("folds")
+    profiler:stop("cache")
     return win_cache
 end
 
@@ -163,7 +171,7 @@ end
 
 M.fold_column = {
     name = "fold",
-    on_click = "v:lua.click_handlers.click_fold",
+    on_click = [[v:lua.stc_click_handlers.fold]],
     text = function ()
         local win_cache = M.get(vim.g.statusline_winid)
         local fillchars = vim.opt.fillchars:get()
@@ -202,7 +210,7 @@ M.fold_column = {
 
 M.number_column = {
     name = "number",
-    on_click = "v:lua.click_handlers.click_line",
+    on_click = [[v:lua.stc_click_handlers.number]],
     text = function ()
         local win_cache = M.get(vim.g.statusline_winid)
         local width = win_cache.numberwidth
@@ -240,5 +248,34 @@ M.whole = {
         M.signs("sign_git"),
     },
 }
+
+M.click_handlers = _G.stc_click_handlers
+
+---@diagnostic disable-next-line: unused-local
+function M.click_handlers.number(minwid, num_clicks, btn, mods)
+    local mouse = vim.fn.getmousepos()
+    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
+    vim.print("hellos")
+end
+
+---@diagnostic disable-next-line: unused-local
+function M.click_handlers.fold(minwid, num_clicks, btn, mods)
+    local mouse = vim.fn.getmousepos()
+    local win = mouse.winid
+    local lnum = mouse.line
+    vim.print("hello")
+
+    if not vim.api.nvim_win_is_valid(win) then return end
+    if lnum < 1 or lnum > vim.api.nvim_buf_line_count(0) then return end
+
+    local fold_info = foldexpr(lnum, win)
+    if fold_info and fold_info.start == lnum then
+        if vim.fn.foldclosed(lnum) == -1 then
+            vim.cmd(lnum .. "foldclose")
+        else
+            vim.cmd(lnum .. "foldopen")
+        end
+    end
+end
 
 return M
