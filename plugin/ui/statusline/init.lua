@@ -2,6 +2,7 @@ if not nixCats("ui.statusline") then
     return
 end
 
+local profiler = require("profiler")
 local ffi = require("ffi")
 
 ffi.cdef [[
@@ -16,6 +17,7 @@ local last_tick = -1
 
 ---@return string
 function StatusLine()
+    profiler:start({ "stl" })
     local tick = ffi.C.display_tick
 
     if tick ~= last_tick then
@@ -25,6 +27,7 @@ function StatusLine()
     end
 
     local result = part.build_string(stl.whole)
+    profiler:stop({ "stl" })
 
     return result
 end

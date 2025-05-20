@@ -166,7 +166,6 @@ M.tabs = {
 }
 
 M.whole = {
-    name = "whole",
     children = {
         M.buffers,
         { text = "%=" },

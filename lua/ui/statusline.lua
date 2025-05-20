@@ -299,7 +299,6 @@ M.right = {
 }
 
 M.whole = {
-    name     = "whole",
     hl       = "StlSectionC",
     children = {
         M.mode,

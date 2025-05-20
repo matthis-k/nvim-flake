@@ -2,7 +2,6 @@ local NuiTree = require("nui.tree")
 local Line = require("nui.line")
 local Text = require("nui.text")
 
-
 ---@class ProfilerRun
 ---@field start integer
 ---@field stop integer
@@ -67,13 +66,14 @@ function ProfilerNode:get_child(name)
     return self.children[name]
 end
 
----@return { name: string, count: integer, avg: number, max: number }
+---@return { name: string, count: integer, avg: number, max: number, min: number }
 function ProfilerNode:summary()
     return {
         name = self.name,
         count = self.total_count,
         avg = self.total_count > 0 and self.total_duration / self.total_count or 0,
         max = self.max_duration,
+        min = self.min_duration,
     }
 end
 
@@ -165,6 +165,8 @@ local function build_tree(_, node)
         avg = s.avg,
         total = total,
         pct = pct,
+        max = s.max,
+        min = s.min,
         raw = node,
     }
 
@@ -196,7 +198,7 @@ function Layout.compute(win_width, depth)
     local DIVIDER = 6
     local indent_width = (depth + 2) * 2
     local reserved_name = math.floor(win_width / 4)
-    local rest_width = math.max(win_width - reserved_name - 2, 40) -- -2 for padding
+    local rest_width = math.max(win_width - reserved_name - 2, 15) -- -2 for padding
     local base = math.floor(rest_width / DIVIDER)
     local rest = rest_width - (base * DIVIDER)
     local W_NAME = reserved_name - indent_width
@@ -254,8 +256,8 @@ local function prepare(node, win_width)
     line:append(string.format("%" .. layout.W_TOTAL .. "s ", string.format("%.2fms", total)), hl_group)
     line:append(string.format("%" .. layout.W_COUNT .. "s ", tostring(count)), hl_group)
     line:append(string.format("%" .. layout.W_AVG .. "s", string.format("%.2fms", avg)), hl_group)
-    line:append(string.format("%" .. layout.W_MAX .. "s", string.format("%.2fms", max)), hl_group)
-    line:append(string.format("%" .. layout.W_MIN .. "s", string.format("%.2fms", min)), hl_group)
+    line:append(string.format("%" .. layout.W_MAX .. "s", string.format("%.2fms", min)), hl_group)
+    line:append(string.format("%" .. layout.W_MIN .. "s", string.format("%.2fms", max)), hl_group)
     line:append("  ", hl_group)
 
     local actual_text_width = indent_visual_width + line:width()
@@ -305,8 +307,8 @@ function Profiler:report()
                 line:append(string.format("%" .. layout.W_TOTAL .. "s ", "Total"), hl)
                 line:append(string.format("%" .. layout.W_COUNT .. "s ", "Count"), hl)
                 line:append(string.format("%" .. layout.W_AVG .. "s", "Avg"), hl)
-                line:append(string.format("%" .. layout.W_AVG .. "s", "Min"), hl)
-                line:append(string.format("%" .. layout.W_AVG .. "s", "Max"), hl)
+                line:append(string.format("%" .. layout.W_MIN .. "s", "Min"), hl)
+                line:append(string.format("%" .. layout.W_MAX .. "s", "Max"), hl)
                 line:append("  ", hl)
 
                 return line
