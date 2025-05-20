@@ -83,7 +83,6 @@ return {
         { "n", "<leader>qj", "<cmd>cnext<CR>",                             { desc = "Next quickfix", silent = true } },
         { "n", "<leader>qk", "<cmd>cprev<CR>",                             { desc = "Prev quickfix", silent = true } },
 
-        -- add description
         { "n", "gri",        vim.lsp.buf.implementation,                   { desc = "Go to implementation" } },
         { "n", "gra",        vim.lsp.buf.code_action,                      { desc = "Code action" } },
         { "n", "grr",        vim.lsp.buf.references,                       { desc = "Find references" } },
@@ -91,8 +90,11 @@ return {
 
         { "n", "<leader>p",  "<nop>",                                      { desc = "Profiler" } },
         { "n", "<leader>pr", function () require("profiler"):report() end, { desc = "Report" } },
-        { "n", "<leader>pp", function () require("profiler"):toggle() end, { desc = "Toggle" } },
-        { "n", "<leader>pc", function () require("profiler"):clean() end,  { desc = "Clean" } },
+        { "n", "<leader>pp", function ()
+            require("profiler"):toggle()
+            vim.cmd.redrawstatus()
+        end, { desc = "Toggle" } },
+        { "n", "<leader>pc", function () require("profiler"):clean() end, { desc = "Clean" } },
     },
 
     ---@type table<string, { [1]:Mode, [2]:Lhs, [3]:Rhs, [4]?:Opts }[]>

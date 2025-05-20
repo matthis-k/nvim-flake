@@ -3,12 +3,6 @@ local Line = require("nui.line")
 local Text = require("nui.text")
 
 
-local MAX_RUNS = 100
-
------------------------------------------------------------
--- Profiler Node
------------------------------------------------------------
-
 ---@class ProfilerRun
 ---@field start integer
 ---@field stop integer
@@ -18,11 +12,11 @@ local MAX_RUNS = 100
 ---@field name string
 ---@field parent ProfilerNode|nil
 ---@field children table<string, ProfilerNode>
----@field runs ProfilerRun[]
 ---@field current_start integer|nil
 ---@field total_duration integer
 ---@field total_count integer
 ---@field max_duration integer
+---@field min_duration integer
 local ProfilerNode = {}
 ProfilerNode.__index = ProfilerNode
 
@@ -34,11 +28,11 @@ function ProfilerNode.new(name, parent)
         name = name,
         parent = parent,
         children = {},
-        runs = {},
         current_start = nil,
         total_duration = 0,
         total_count = 0,
         max_duration = 0,
+        min_duration = -1,
     }, ProfilerNode)
 end
 
@@ -52,11 +46,10 @@ function ProfilerNode:stop()
     if not self.current_start then return end
     local stop = vim.uv.hrtime() * (1e-6)
     local duration = stop - self.current_start
-    table.insert(self.runs, { start = self.current_start, stop = stop, duration = duration })
-    if #self.runs > MAX_RUNS then table.remove(self.runs, 1) end
     self.total_duration = self.total_duration + duration
     self.total_count = self.total_count + 1
     self.max_duration = math.max(self.max_duration, duration)
+    self.min_duration = self.min_duration > 0 and math.min(self.min_duration, duration) or duration
     self.current_start = nil
     local parent = self.parent
     if parent and not parent.current_start then
@@ -84,10 +77,6 @@ function ProfilerNode:summary()
     }
 end
 
------------------------------------------------------------
--- Profiler Singleton
------------------------------------------------------------
-
 ---@class Profiler
 ---@field enabled boolean
 ---@field stack ProfilerNode[]
@@ -111,7 +100,6 @@ end
 
 function Profiler:toggle()
     self.enabled = self.enabled ~= true
-    vim.notify("Profiling is now " .. (self.enabled and "enabled" or "disabled"), vim.log.levels.INFO)
 end
 
 ---Start timing a named block or path
@@ -180,7 +168,6 @@ local function build_tree(_, node)
         raw = node,
     }
 
-
     local children = vim.iter(node.children):map(build_tree):totable()
 
     if not node.parent then
@@ -200,18 +187,18 @@ local function build_tree(_, node)
     return NuiTree.Node(data, children)
 end
 
-
 local Layout = {}
 
 ---@param win_width integer
 ---@param depth integer
 ---@return table
 function Layout.compute(win_width, depth)
+    local DIVIDER = 6
     local indent_width = (depth + 2) * 2
-    local reserved_name = math.floor(win_width * 3 / 8)
+    local reserved_name = math.floor(win_width / 4)
     local rest_width = math.max(win_width - reserved_name - 2, 40) -- -2 for padding
-    local base = math.floor(rest_width / 4)
-    local rest = rest_width - (base * 4)
+    local base = math.floor(rest_width / DIVIDER)
+    local rest = rest_width - (base * DIVIDER)
     local W_NAME = reserved_name - indent_width
 
     return {
@@ -219,7 +206,9 @@ function Layout.compute(win_width, depth)
         W_PERCENT = base + (rest >= 1 and 1 or 0),
         W_TOTAL = base + (rest >= 2 and 1 or 0),
         W_COUNT = base + (rest >= 3 and 1 or 0),
-        W_AVG = base,
+        W_AVG = base + (rest >= 4 and 1 or 0),
+        W_MAX = base + (rest >= 5 and 1 or 0),
+        W_MIN = base,
     }
 end
 
@@ -255,6 +244,8 @@ local function prepare(node, win_width)
 
     local count = node.count or 0
     local avg = node.avg or 0
+    local max = node.max or 0
+    local min = node.min or 0
     local total = node.total or 0
     local pct = node.pct or 0
 
@@ -263,9 +254,10 @@ local function prepare(node, win_width)
     line:append(string.format("%" .. layout.W_TOTAL .. "s ", string.format("%.2fms", total)), hl_group)
     line:append(string.format("%" .. layout.W_COUNT .. "s ", tostring(count)), hl_group)
     line:append(string.format("%" .. layout.W_AVG .. "s", string.format("%.2fms", avg)), hl_group)
+    line:append(string.format("%" .. layout.W_MAX .. "s", string.format("%.2fms", max)), hl_group)
+    line:append(string.format("%" .. layout.W_MIN .. "s", string.format("%.2fms", min)), hl_group)
     line:append("  ", hl_group)
 
-    -- pad to full window width
     local actual_text_width = indent_visual_width + line:width()
     local remaining = win_width - actual_text_width
     if remaining > 0 then
@@ -278,14 +270,12 @@ end
 function Profiler:report()
     while #self.stack > 0 do self:stop() end
 
-    -- compute artificial total
     local root_total = 0
     for _, c in pairs(self.root.children) do
         root_total = root_total + c.total_duration
     end
     self.root.total_duration = root_total
 
-    -- setup window
     vim.cmd("botright vsplit")
     local win = vim.api.nvim_get_current_win()
     local bufnr = vim.api.nvim_create_buf(false, true)
@@ -315,6 +305,8 @@ function Profiler:report()
                 line:append(string.format("%" .. layout.W_TOTAL .. "s ", "Total"), hl)
                 line:append(string.format("%" .. layout.W_COUNT .. "s ", "Count"), hl)
                 line:append(string.format("%" .. layout.W_AVG .. "s", "Avg"), hl)
+                line:append(string.format("%" .. layout.W_AVG .. "s", "Min"), hl)
+                line:append(string.format("%" .. layout.W_AVG .. "s", "Max"), hl)
                 line:append("  ", hl)
 
                 return line
