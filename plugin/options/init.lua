@@ -88,5 +88,4 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
--- Fix markdown indentation settings
 vim.g.markdown_recommended_style = 0
