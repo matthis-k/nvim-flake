@@ -285,7 +285,13 @@ M.left = {
     children  = {
         Git.all,
         M.filename,
-        { before = "[", after = "]", child_sep = " ", children = { M.modified, M.readonly } },
+        {
+            hl = "StlSectionB",
+            before = "[",
+            after = "]",
+            child_sep = " ",
+            children = { M.modified, M.readonly },
+        },
         M.diagnostics.all,
     },
 }
