@@ -29,5 +29,14 @@ function TabLine()
     return res
 end
 
+vim.api.nvim_create_augroup("RedrawTabline", { clear = true })
+vim.api.nvim_create_autocmd({ "ModeChanged", "DiagnosticChanged" }, {
+    group = "RedrawTabline",
+    callback = function ()
+        vim.cmd.redrawtabline()
+    end,
+})
+
+
 vim.o.tabline = "%!v:lua.TabLine()"
 vim.o.showtabline = 2
