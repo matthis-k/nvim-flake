@@ -1,9 +1,20 @@
 local Part = {}
 local profiler = require("profiler")
 
+---@class PartSpec
+---@field name? string
+---@field text? string|fun():string
+---@field hl? string|fun():string
+---@field before? string|fun():string|PartSpec|fun():PartSpec
+---@field after? string|fun():string|PartSpec|fun():PartSpec
+---@field children? PartSpec[]|fun():PartSpec[]
+---@field child_sep? string|fun():string|PartSpec|fun():PartSpec
+---@field on_click? string|fun():string
+---@field on_click_param? string|fun():string
+---@field build_string? fun(part: PartSpec): string
 
 --- Build a string from a part
----@param part table
+---@param part PartSpec
 ---@return string
 function Part.build_string(part)
     ---@param val any
