@@ -16,6 +16,7 @@ local Text = require("nui.text")
 ---@field total_count integer
 ---@field max_duration integer
 ---@field min_duration integer
+---@field is_root boolean
 local ProfilerNode = {}
 ProfilerNode.__index = ProfilerNode
 
@@ -32,6 +33,7 @@ function ProfilerNode.new(name, parent)
         total_count = 0,
         max_duration = 0,
         min_duration = -1,
+        is_root = (not parent) or not parent.parent,
     }, ProfilerNode)
 end
 
@@ -66,10 +68,21 @@ function ProfilerNode:get_child(name)
     return self.children[name]
 end
 
----@return { name: string, count: integer, avg: number, max: number, min: number }
+function ProfilerNode:get_root()
+    if self.parent and not self.is_root then
+        return self.parent:get_root()
+    else
+        return self
+    end
+end
+
+---@return { name: string, count: integer, avg: number, max: number, min: number, percentage_rel: number, percentage_total: number }
 function ProfilerNode:summary()
     return {
         name = self.name,
+        percentage_rel = (self.is_root or not self.parent) and 1 or self.total_duration / self.parent.total_duration,
+        percentage_total = self.total_duration / self:get_root().total_duration,
+        total_duration = self.total_duration,
         count = self.total_count,
         avg = self.total_count > 0 and self.total_duration / self.total_count or 0,
         max = self.max_duration,
@@ -154,21 +167,7 @@ end
 ---@param node ProfilerNode
 ---@return NuiTree.Node
 local function build_tree(_, node)
-    local s = node:summary()
-    local total = s.avg * s.count
-    local parent_total = node.parent and node.parent.total_duration or total
-    local pct = (parent_total > 0) and (total / parent_total * 100) or 0
-
-    local data = {
-        name = s.name,
-        count = s.count,
-        avg = s.avg,
-        total = total,
-        pct = pct,
-        max = s.max,
-        min = s.min,
-        raw = node,
-    }
+    local data = node:summary()
 
     local children = vim.iter(node.children):map(build_tree):totable()
 
@@ -195,22 +194,51 @@ local Layout = {}
 ---@param depth integer
 ---@return table
 function Layout.compute(win_width, depth)
-    local DIVIDER = 6
-    local indent_width = (depth + 2) * 2
-    local reserved_name = math.floor(win_width / 4)
-    local rest_width = math.max(win_width - reserved_name - 2, 15) -- -2 for padding
-    local base = math.floor(rest_width / DIVIDER)
-    local rest = rest_width - (base * DIVIDER)
-    local W_NAME = reserved_name - indent_width
+    local left_padding = 2
+    local right_padding = 2
+    local assignable_space = win_width - left_padding - right_padding
+    local space_left = assignable_space
+
+    local function assign(space, force)
+        force = force ~= false
+        if not force and space_left <= 0 then
+            return 0
+        else
+            local assigned = math.min(space_left, space)
+            space_left = space_left - assigned
+            return assigned
+        end
+    end
+
+    local W_NAME = assign(math.max(20, math.floor(assignable_space / 6)))
+    local W_PERCENT_TTL = assign(8)
+    local W_PERCENT_REL = assign(8)
+    local W_COUNT = assign(6)
+    local W_TOTAL = assign(10)
+    local W_AVG = assign(8)
+    local W_MIN = assign(8)
+    local W_MAX = assign(10)
+
+    while space_left > 1 do
+        W_TOTAL = W_TOTAL + assign(1, false)
+        W_TOTAL = W_TOTAL + assign(1, false)
+        W_MAX = W_MAX + assign(1, false)
+        W_AVG = W_AVG + assign(1, false)
+        W_MAX = W_MAX + assign(1, false)
+        W_MIN = W_MIN + assign(1, false)
+        W_NAME = W_NAME + assign(1, false)
+        W_COUNT = W_COUNT + assign(1, false)
+    end
 
     return {
-        W_NAME = W_NAME,
-        W_PERCENT = base + (rest >= 1 and 1 or 0),
-        W_TOTAL = base + (rest >= 2 and 1 or 0),
-        W_COUNT = base + (rest >= 3 and 1 or 0),
-        W_AVG = base + (rest >= 4 and 1 or 0),
-        W_MAX = base + (rest >= 5 and 1 or 0),
-        W_MIN = base,
+        W_NAME = W_NAME - left_padding - ((depth + 1) * 2),
+        W_PERCENT_TTL = W_PERCENT_TTL,
+        W_PERCENT_REL = W_PERCENT_REL,
+        W_TOTAL = W_TOTAL,
+        W_COUNT = W_COUNT,
+        W_AVG = W_AVG,
+        W_MAX = W_MAX,
+        W_MIN = W_MIN,
     }
 end
 
@@ -244,20 +272,16 @@ local function prepare(node, win_width)
         virt_text_pos = "inline",
     }))
 
-    local count = node.count or 0
-    local avg = node.avg or 0
-    local max = node.max or 0
-    local min = node.min or 0
-    local total = node.total or 0
-    local pct = node.pct or 0
-
     line:append(string.format("%-" .. layout.W_NAME .. "s ", node.name or ""), hl_group)
-    line:append(string.format("%" .. layout.W_PERCENT .. "s ", string.format("%.2f%%", pct)), hl_group)
-    line:append(string.format("%" .. layout.W_TOTAL .. "s ", string.format("%.2fms", total)), hl_group)
-    line:append(string.format("%" .. layout.W_COUNT .. "s ", tostring(count)), hl_group)
-    line:append(string.format("%" .. layout.W_AVG .. "s", string.format("%.2fms", avg)), hl_group)
-    line:append(string.format("%" .. layout.W_MAX .. "s", string.format("%.2fms", min)), hl_group)
-    line:append(string.format("%" .. layout.W_MIN .. "s", string.format("%.2fms", max)), hl_group)
+    line:append(string.format("%" .. layout.W_PERCENT_TTL .. "s ", string.format("%.2f%%", node.percentage_total * 100)),
+        hl_group)
+    line:append(string.format("%" .. layout.W_PERCENT_REL .. "s ", string.format("%.2f%%", node.percentage_rel * 100)),
+        hl_group)
+    line:append(string.format("%" .. layout.W_TOTAL .. "s ", string.format("%.2fms", node.total_duration)), hl_group)
+    line:append(string.format("%" .. layout.W_COUNT .. "s ", node.count), hl_group)
+    line:append(string.format("%" .. layout.W_AVG .. "s", string.format("%.2fms", node.avg)), hl_group)
+    line:append(string.format("%" .. layout.W_MIN .. "s", string.format("%.2fms", node.min)), hl_group)
+    line:append(string.format("%" .. layout.W_MAX .. "s", string.format("%.2fms", node.max)), hl_group)
     line:append("  ", hl_group)
 
     local actual_text_width = indent_visual_width + line:width()
@@ -303,7 +327,8 @@ function Profiler:report()
                 local line = Line()
                 line:append("  ", hl)
                 line:append(string.format("%-" .. layout.W_NAME .. "s ", "Name"), hl)
-                line:append(string.format("%" .. layout.W_PERCENT .. "s ", "Percent"), hl)
+                line:append(string.format("%" .. layout.W_PERCENT_TTL .. "s ", "Ttl. %"), hl)
+                line:append(string.format("%" .. layout.W_PERCENT_REL .. "s ", "Rel. %"), hl)
                 line:append(string.format("%" .. layout.W_TOTAL .. "s ", "Total"), hl)
                 line:append(string.format("%" .. layout.W_COUNT .. "s ", "Count"), hl)
                 line:append(string.format("%" .. layout.W_AVG .. "s", "Avg"), hl)
@@ -317,8 +342,6 @@ function Profiler:report()
             end
         end,
     })
-
-
 
     vim.keymap.set("n", "<CR>", function ()
         local n = tree:get_node()
