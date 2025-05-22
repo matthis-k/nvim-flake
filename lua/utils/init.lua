@@ -116,4 +116,47 @@ function M.foldexpr(lnum, win)
     return get_fold_info(target_win, lnum)
 end
 
+local reverse_lookup = {}
+
+local highlight_fields = {
+    "fg", "bg", "sp",
+    "bold", "italic", "underline", "undercurl", "strikethrough", "reverse",
+    "nocombine", "standout",
+}
+
+local function serialize_highlight(tbl)
+    local parts = {}
+    for _, key in ipairs(highlight_fields) do
+        local val = tbl[key]
+        if val == nil or val == false then
+            table.insert(parts, "")
+        else
+            local sanitized = tostring(val):gsub("#", "")
+            table.insert(parts, sanitized)
+        end
+    end
+    return "AutoHl" .. table.concat(parts, "IxI")
+end
+
+--- Create or reuse a highlight group for a given spec
+--- @param hl_def table
+--- @return string: highlight group name
+function M.auto_hl(hl_def)
+    local key = serialize_highlight(hl_def)
+
+    if reverse_lookup[key] then
+        return key
+    end
+
+    vim.api.nvim_set_hl(0, key, hl_def)
+
+    reverse_lookup[key] = true
+    return key
+end
+
+function M.to_hex(color)
+    if not color or type(color) ~= "number" then return nil end
+    return string.format("#%06x", color)
+end
+
 return M

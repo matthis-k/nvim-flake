@@ -6,75 +6,97 @@ local hl = base16.highlight
 
 vim.cmd.colorscheme("base16-catppuccin-mocha")
 
--- for blink.cmp to look clean
-hl.PMenuSel                  = {
-    guifg = nil,
-    guibg = colors.base02,
-    gui = nil,
-    guisp = nil,
-    ctermfg = nil,
-    ctermbg =
-        colors.cterm02,
+local palette                = {
+    crust     = colors.base00,
+    mantle    = colors.base01,
+    base      = colors.base02,
+    surface0  = colors.base03,
+    surface1  = colors.base04,
+
+    text      = colors.base05,
+    subtext1  = colors.base06,
+    subtext0  = colors.base07,
+
+    red       = colors.base08,
+    peach     = colors.base09,
+    yellow    = colors.base0A,
+    green     = colors.base0B,
+    teal      = colors.base0C,
+    blue      = colors.base0D,
+    mauve     = colors.base0E,
+    rosewater = colors.base0F,
 }
-hl.CmpItemAbbr               = { guifg = nil, guibg = nil, gui = nil, guisp = nil, ctermfg = nil, ctermbg = nil }
 
-hl.TSVariable                = { guifg = colors.base0A }
+local semantic               = {
+    diag = {
+        error   = palette.red,
+        warning = palette.peach,
+        info    = palette.yellow,
+        hint    = palette.teal,
+    },
+    git  = {
+        added   = palette.green,
+        changed = palette.yellow,
+        removed = palette.red,
+    },
+    mode = {
+        normal   = palette.blue,
+        visual   = palette.mauve,
+        insert   = palette.green,
+        replace  = palette.peach,
+        command  = palette.yellow,
+        terminal = palette.green,
+    },
+}
 
-hl.TblSectionA               = "StlSectionA"
-hl.TblSectionB               = "StlSectionB"
-hl.TblSectionC               = "StlSectionC"
+hl.PMenuSel                  = { guibg = palette.base }
+hl.CmpItemAbbr               = {}
 
-hl.TblBufferLabel            = { link = "TblSectionA", gui = "bold" }
+hl.TSVariable                = { guifg = palette.yellow }
 
-hl.TblBuffer                 = { link = "TblSectionB", guibg = colors.base01 }
-hl.TblCloseButton            = { guifg = colors.base08, guibg = colors.base01 }
-hl.TblFilename               = { link = "TblBuffer", guifg = colors.base05 }
+hl.TblSectionA               = { guifg = palette.crust, guibg = palette.blue, gui = "reverse" }
+hl.TblSectionB               = { guifg = palette.text, guibg = palette.base }
+hl.TblSectionC               = { guifg = palette.text, guibg = palette.crust }
 
-hl.TblCurrentBuffer          = { link = "TblBuffer", guibg = colors.base02 }
-hl.TblCurrentFilename        = { guifg = colors.base0D, guibg = colors.base02, gui = "bold" }
-hl.TblCurrentCloseButton     = { guifg = colors.base08, guibg = colors.base02 }
+hl.TblBuffer                 = { guifg = palette.text, guibg = palette.mantle }
+hl.TblCloseButton            = { guifg = semantic.diag.error, guibg = palette.mantle }
+hl.TblFilename               = { guibg = palette.mantle, guifg = palette.text }
 
-hl.TblDiagnosticError        = { guifg = colors.base08, guibg = colors.base01, gui = "bold" }
-hl.TblDiagnosticWarn         = { guifg = colors.base09, guibg = colors.base01 }
-hl.TblDiagnosticInfo         = { guifg = colors.base0D, guibg = colors.base01 }
-hl.TblDiagnosticHint         = { guifg = colors.base0C, guibg = colors.base01 }
+hl.TblCurrentBuffer          = { guifg = palette.text, guibg = palette.base }
+hl.TblCurrentFilename        = { guifg = palette.blue, guibg = palette.base, gui = "bold" }
+hl.TblCurrentCloseButton     = { guifg = semantic.diag.error, guibg = palette.base }
 
-hl.TblCurrentDiagnosticError = { guifg = colors.base08, guibg = colors.base02, gui = "bold" }
-hl.TblCurrentDiagnosticWarn  = { guifg = colors.base09, guibg = colors.base02 }
-hl.TblCurrentDiagnosticInfo  = { guifg = colors.base0D, guibg = colors.base02 }
-hl.TblCurrentDiagnosticHint  = { guifg = colors.base0C, guibg = colors.base02 }
+hl.TblDiagnosticError        = { guifg = semantic.diag.error, guibg = palette.mantle, gui = "bold" }
+hl.TblDiagnosticWarn         = { guifg = semantic.diag.warning, guibg = palette.mantle }
+hl.TblDiagnosticInfo         = { guifg = semantic.diag.info, guibg = palette.mantle }
+hl.TblDiagnosticHint         = { guifg = semantic.diag.hint, guibg = palette.mantle }
 
-hl.TblTabLabel               = { link = "TblSectionA", gui = "bold" }
-hl.TblTab                    = { link = "TblSectionB", guibg = colors.base01 }
-hl.TblTabCloseButton         = { guifg = colors.base08, guibg = colors.base01 }
-hl.TblCurrentTab             = { guifg = colors.base0D, guibg = colors.base02, gui = "bold" }
-hl.TblCurrentTabCloseButton  = { guifg = colors.base08, guibg = colors.base02 }
+hl.TblCurrentDiagnosticError = { guifg = semantic.diag.error, guibg = palette.base, gui = "bold" }
+hl.TblCurrentDiagnosticWarn  = { guifg = semantic.diag.warning, guibg = palette.base }
+hl.TblCurrentDiagnosticInfo  = { guifg = semantic.diag.info, guibg = palette.base }
+hl.TblCurrentDiagnosticHint  = { guifg = semantic.diag.hint, guibg = palette.base }
 
-hl.StlSectionA               = { guifg = colors.base0D, guibg = colors.base00, gui = "reverse" }
-hl.StlSectionB               = { guibg = colors.base02 }
+hl.TblTab                    = { guifg = palette.text, guibg = palette.mantle }
+hl.TblTabCloseButton         = { guifg = semantic.diag.error, guibg = palette.mantle }
+hl.TblCurrentTab             = { guifg = palette.blue, guibg = palette.base, gui = "bold" }
+hl.TblCurrentTabCloseButton  = { guifg = semantic.diag.error, guibg = palette.base }
+
+hl.StlSectionA               = { guifg = palette.crust, guibg = palette.blue, gui = "reverse" }
+hl.StlSectionB               = { guifg = palette.text, guibg = palette.base }
 hl.StlSectionC               = "Normal"
 
-hl.StlModeNormal             = { guifg = colors.base0D, guibg = colors.base00, gui = "reverse,bold" }
-hl.StlModeVisual             = { guifg = colors.base0E, guibg = colors.base00, gui = "reverse,bold" }
-hl.StlModeInsert             = { guifg = colors.base0B, guibg = colors.base00, gui = "reverse,bold" }
-hl.StlModeReplace            = { guifg = colors.base09, guibg = colors.base00, gui = "reverse,bold" }
-hl.StlModeCommand            = { guifg = colors.base0A, guibg = colors.base00, gui = "reverse,bold" }
-hl.StlModeTerminalInsert     = "StlModeInsert"
-hl.StlModeTerminalNormal     = "StlModeNormal"
-
 hl.StlFilename               = "Field"
+hl.StlDiagnosticError        = { guifg = semantic.diag.error, guibg = palette.base, gui = "bold" }
+hl.StlDiagnosticWarn         = { guifg = semantic.diag.warning, guibg = palette.base }
+hl.StlDiagnosticInfo         = { guifg = semantic.diag.info, guibg = palette.base }
+hl.StlDiagnosticHint         = { guifg = semantic.diag.hint, guibg = palette.base }
 
-hl.StlDiagnosticError        = { guifg = colors.base08, guibg = colors.base02, gui = "bold" }
-hl.StlDiagnosticWarn         = { guifg = colors.base09, guibg = colors.base02 }
-hl.StlDiagnosticInfo         = { guifg = colors.base0D, guibg = colors.base02 }
-hl.StlDiagnosticHint         = { guifg = colors.base0C, guibg = colors.base02 }
-
-hl.StlGitBranch              = { guifg = colors.base0D, guibg = colors.base02, gui = "bold" }
-hl.StlGitAdded               = { guifg = colors.base0B, guibg = colors.base02 }
-hl.StlGitChanged             = { guifg = colors.base0A, guibg = colors.base02 }
-hl.StlGitDeleted             = { guifg = colors.base08, guibg = colors.base02 }
-hl.StlGitRemoteAhead         = { guifg = colors.base0E, guibg = colors.base02 }
-hl.StlGitRemoteBehind        = { guifg = colors.base0E, guibg = colors.base02 }
+hl.StlGitBranch              = { guifg = palette.blue, guibg = palette.base, gui = "bold" }
+hl.StlGitAdded               = { guifg = semantic.git.added, guibg = palette.base }
+hl.StlGitChanged             = { guifg = semantic.git.changed, guibg = palette.base }
+hl.StlGitDeleted             = { guifg = semantic.git.removed, guibg = palette.base }
+hl.StlGitRemoteAhead         = { guifg = palette.mauve, guibg = palette.base }
+hl.StlGitRemoteBehind        = { guifg = palette.mauve, guibg = palette.base }
 
 hl.GitSignsUntracked         = "@method"
 hl.GitSignsChange            = "@class"
@@ -84,10 +106,17 @@ hl.StcSignColumn             = "SignColumn"
 hl.StcFoldColumn             = "FoldColumn"
 hl.StcLineNumber             = "LineNr"
 hl.StcCurrentLineNumber      = { link = "CursorLine", gui = "bold" }
-hl.StcFold                   = { guifg = colors.base0D }
-hl.StcFoldCurrent            = { guifg = colors.base0D, guibg = colors.base02 }
-hl.StcFolded                 = { guifg = colors.base0D }
+hl.StcFold                   = { guifg = palette.blue }
+hl.StcFoldCurrent            = { guifg = palette.blue, guibg = palette.base }
+hl.StcFolded                 = { guifg = palette.blue }
 
+hl.StlModeNormal             = { guifg = semantic.mode.normal, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeVisual             = { guifg = semantic.mode.visual, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeInsert             = { guifg = semantic.mode.insert, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeReplace            = { guifg = semantic.mode.replace, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeCommand            = { guifg = semantic.mode.command, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeTerminalInsert     = { guifg = semantic.mode.terminal, guibg = palette.crust, gui = "reverse,bold" }
+hl.StlModeTerminalNormal     = { guifg = semantic.mode.normal, guibg = palette.crust, gui = "reverse,bold" }
 
-hl.ProfileReportEven = { guibg = colors.base03, guifg = colors.base05 }
-hl.ProfileReportOdd = { guibg = colors.base02, guifg = colors.base05 }
+hl.ProfileReportEven         = { guibg = palette.surface0, guifg = palette.text }
+hl.ProfileReportOdd          = { guibg = palette.base, guifg = palette.text }

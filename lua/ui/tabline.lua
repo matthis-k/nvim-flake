@@ -1,7 +1,5 @@
-local utils = require("utils")
+local utls = require("utils")
 local devicons = require("nvim-web-devicons")
-
-
 
 local M = {}
 
@@ -15,14 +13,12 @@ function M.init_cache()
             if fname == "" then fname = "[No Name]" end
 
             local icon, icon_hl = devicons.get_icon(fname, vim.fn.fnamemodify(fname, ":e"), { default = true })
-            icon = icon or ""
-            icon_hl = icon_hl or "Normal"
 
             cache[buf] = {
                 cur = (vim.api.nvim_get_current_buf() == buf),
                 fname = fname,
-                icon = icon,
-                icon_hl = icon_hl,
+                icon = icon or "",
+                icon_hl = icon_hl or "Normal",
             }
         end
     end
@@ -36,17 +32,24 @@ local function get_sign(name, fallback, texthl)
 end
 
 function M.buffer(buf)
-    local buf_cache = cache[buf] or {}
     return {
         name = "buffer",
         before = " ",
-        hl = buf_cache.cur and "TblCurrentBuffer" or "TblBuffer",
+        hl = cache[buf].cur and "TblCurrentBuffer" or "TblBuffer",
         children = {
-            { hl = buf_cache.icon_hl, text = buf_cache.icon },
+            {
+                hl = utls.auto_hl({
+                    bg = utls.to_hex(utls.highlights
+                        [cache[buf].cur and "TblCurrentBuffer" or "TblBuffer"].bg),
+
+                    fg = utls.to_hex(utls.highlights[cache[buf].icon_hl].fg),
+                }),
+                text = cache[buf].icon,
+            },
             {
                 before = " ",
-                hl = buf_cache.cur and "TblCurrentFilename" or "TblFilename",
-                text = buf_cache.fname,
+                hl = cache[buf].cur and "TblCurrentFilename" or "TblFilename",
+                text = cache[buf].fname,
                 on_click = "v:lua.tbl_click_handlers.buffer",
                 on_click_param = tostring(buf),
             },
@@ -66,8 +69,8 @@ function M.buffer(buf)
                         if n > 0 then
                             local sign = get_sign(s.name, s.sym)
                             table.insert(out, {
-                                text = string.format("%d %s", n, utils.utf8sub(sign.text, 1, 1)),
-                                hl = (buf_cache.cur and "TblCurrent" or "Tbl") .. s.hl,
+                                text = string.format("%d %s", n, utls.utf8sub(sign.text, 1, 1)),
+                                hl = (cache[buf].cur and "TblCurrent" or "Tbl") .. s.hl,
                             })
                         end
                     end
@@ -78,7 +81,7 @@ function M.buffer(buf)
                 text = "󰖭",
                 before = " ",
                 after = " ",
-                hl = buf_cache.cur and "TblCurrentCloseButton" or "TblCloseButton",
+                hl = cache[buf].cur and "TblCurrentCloseButton" or "TblCloseButton",
                 on_click = "v:lua.tbl_click_handlers.close_buffer",
                 on_click_param = tostring(buf),
             },

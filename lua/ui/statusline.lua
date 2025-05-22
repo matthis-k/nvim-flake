@@ -63,10 +63,10 @@ function M.init_cache()
                 end
                 short = table.concat(parts, "/") .. "/" .. fname
             end
-            local icon, hl = devicons.get_icon(file, vim.fn.fnamemodify(file, ":e"), { default = true })
+            local icon, icon_hl = devicons.get_icon(file, vim.fn.fnamemodify(file, ":e"), { default = true })
             buf_cache[bufnr] = {
                 icon = icon or "",
-                icon_hl = hl or "Normal",
+                icon_hl = icon_hl or "Normal",
                 filepath = short,
             }
         end
