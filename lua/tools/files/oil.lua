@@ -49,7 +49,7 @@ setmetatable(FileExplorer, {
         instance.win = vim.api.nvim_open_win(instance.buf, true, win_config)
         if instance.win == 0 then
             vim.api.nvim_buf_delete(instance.buf, { force = true })
-            vim.notify("Window creation failed: " .. tostring(win), vim.log.levels.ERROR)
+            vim.notify("Window creation failed: " .. tostring(self.win), vim.log.levels.ERROR)
             return nil
         end
 
