@@ -57,6 +57,7 @@
                 nixfmt-rfc-style
                 nil
               ];
+              qml = with pkgs; [ kdePackages.qtdeclarative ];
               rust = with pkgs; [
                 rust-analyzer
                 (rust-bin.stable.latest.default.override { extensions = [ "rust-src" ]; })
@@ -155,15 +156,16 @@
                 general = true;
                 lsp = addEnabledField {
                   ccpp = true;
-                  rust = true;
-                  lua = true;
-                  json = true;
                   css = true;
-                  toml = true;
-                  nix = true;
-                  md = true;
-                  ts = true;
                   help = true;
+                  json = true;
+                  lua = true;
+                  md = true;
+                  nix = true;
+                  qml = true;
+                  rust = true;
+                  toml = true;
+                  ts = true;
                   xml = true;
                 };
                 git = true;
