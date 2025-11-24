@@ -1,5 +1,4 @@
 local Part = {}
-local profiler = require("profiler")
 
 ---@class PartSpec
 ---@field name? string
@@ -34,9 +33,6 @@ function Part.build_string(part)
         return tostring(val or "")
     end
 
-    if part.name then
-        profiler:start(part.name)
-    end
 
     local hl = eval(part.hl)
     local text = eval(part.text)
@@ -74,10 +70,6 @@ function Part.build_string(part)
             click_prefix = string.format("%%@%s@", on_click)
         end
         click_suffix = "%T"
-    end
-
-    if part.name then
-        profiler:stop(part.name)
     end
 
     if #content > 0 then

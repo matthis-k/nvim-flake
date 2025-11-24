@@ -8,7 +8,8 @@ resession.setup({})
 
 vim.api.nvim_create_autocmd("VimLeavePre", {
     callback = function ()
-        resession.save(vim.fn.getcwd(), { notify = true })
+        -- Skip notifications here since some UIs cannot render during shutdown.
+        resession.save(vim.fn.getcwd(), { notify = false })
     end,
 })
 

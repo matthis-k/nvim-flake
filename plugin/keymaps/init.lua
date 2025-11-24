@@ -1,3 +1,4 @@
+local Snacks = require("snacks")
 local keymaps = require("keymaps")
 vim.g.mapleader = keymaps.leader
 vim.g.maplocalleader = keymaps.leader
@@ -42,30 +43,6 @@ require("which-key").setup({
 })
 
 
-for _, km in ipairs(keymaps.permanent) do
-    local mode, lhs, rhs, opts = unpack(km)
-    vim.keymap.set(mode, lhs, rhs, opts)
-end
-
-if nixCats("lsp.enabled") then
-    vim.api.nvim_create_augroup("LspKeymaps", { clear = true })
-    vim.api.nvim_create_autocmd("LspAttach", {
-        group = "LspKeymaps",
-        callback = function (ev)
-            local client = vim.lsp.get_client_by_id(ev.data.client_id)
-            if not client then
-                return
-            end
-            for method, capability_maps in pairs(keymaps.lsp_maps_by_capability) do
-                if method == "no_requirements" or client:supports_method(method) then
-                    for _, keymap in ipairs(capability_maps) do
-                        local modes, lhs, rhs, opts = unpack(keymap)
-                        opts = opts or {}
-                        opts.buffer = true
-                        vim.keymap.set(modes, lhs, rhs, opts)
-                    end
-                end
-            end
-        end,
-    })
+for _, km in ipairs(keymaps.maps or {}) do
+    Snacks.keymap.set(km.mode, km.lhs, km.rhs, km.opts)
 end

@@ -6,15 +6,16 @@
 
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
+
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     neovim-nightly-overlay.inputs.nixpkgs.follows = "nixpkgs";
+
+    plugins-pick-resession-nvim.url = "github:scottmckendry/pick-resession.nvim";
+    plugins-pick-resession-nvim.flake = false;
 
     nil-ls.url = "github:oxalica/nil/577d160da311cc7f5042038456a0713e9863d09e";
     nil-ls.inputs.nixpkgs.follows = "nixpkgs";
     nil-ls.inputs.rust-overlay.follows = "rust-overlay";
-
-    plugins-resession-telescope-nvim.url = "github:scottmckendry/telescope-resession.nvim";
-    plugins-resession-telescope-nvim.flake = false;
   };
   outputs =
     {
@@ -65,14 +66,21 @@
               toml = with pkgs; [ taplo ];
               ts = with pkgs; [ nodePackages_latest.typescript-language-server ];
               xml = with pkgs; [ lemminx ];
+              opencode = with pkgs; [ opencode ];
             };
+            git = with pkgs; [
+              git
+              gh
+            ];
             general = with pkgs; [
+              git
               curl
               fd
               fzf
               imagemagick
               luarocks
               lua5_1
+              lsof
               ripgrep
             ];
           };
@@ -83,15 +91,18 @@
               which-key-nvim
               nvim-web-devicons
               nui-nvim
+              snacks-nvim
             ];
-            sessions = [ resession-nvim ];
-            ui = {
-              telescope.resession = [ pkgs.neovimPlugins.resession-telescope-nvim ];
-            };
+            sessions = [
+              resession-nvim
+              pkgs.neovimPlugins.pick-resession-nvim
+            ];
             lsp = {
               enabled = [
                 nvim-lspconfig
                 pkgs.vimPlugins.nvim-treesitter.withAllGrammars
+                conform-nvim
+                lazydev-nvim
               ];
               md = [ markview-nvim ];
               help = [ helpview-nvim ];
@@ -101,9 +112,12 @@
               blink-cmp
               lazydev-nvim
             ];
+            opencode = [
+              opencode-nvim
+              snacks-nvim
+            ];
           };
           optionalPlugins = with pkgs.vimPlugins; {
-            general = [ conform-nvim ];
             ui.telescope.enabled = [ telescope-nvim ];
           };
           sharedLibraries = {
@@ -182,6 +196,7 @@
                   statuscolumn = true;
                 };
                 completion.enabled = true;
+                opencode = true;
               };
             };
         in

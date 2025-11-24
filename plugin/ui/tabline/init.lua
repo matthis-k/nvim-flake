@@ -1,6 +1,5 @@
 local ffi = require("ffi")
 local Part = require("part")
-local profiler = require("profiler")
 
 ffi.cdef [[
   typedef unsigned long long disptick_T;
@@ -17,7 +16,6 @@ local tabline = require("ui.tabline")
 
 ---@return string
 function TabLine()
-    profiler:start({ "tabl" })
     local tick = ffi.C.display_tick
     if tick ~= last_tick then
         ---@diagnostic disable-next-line: cast-local-type
@@ -25,7 +23,6 @@ function TabLine()
         tabline.init_cache()
     end
     local res = Part.build_string(tabline.whole)
-    profiler:stop({ "tabl" })
     return res
 end
 

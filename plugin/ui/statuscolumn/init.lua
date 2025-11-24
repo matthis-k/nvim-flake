@@ -4,7 +4,6 @@ end
 
 local ffi = require("ffi")
 local Part = require("part")
-local profiler = require("profiler")
 
 ffi.cdef [[
   typedef unsigned long long disptick_T;
@@ -18,7 +17,6 @@ local stc = require("ui.statuscolumn")
 ---Defines my status column
 ---@return string
 function StatusColumn()
-    profiler:start({ "stc" })
     local tick = ffi.C.display_tick
 
     if tick ~= last_tick then
@@ -28,9 +26,36 @@ function StatusColumn()
     end
 
     local result = Part.build_string(stc.whole)
-    profiler:stop({ "stc" })
     return result
 end
 
 vim.o.statuscolumn = "%!v:lua.StatusColumn()"
 vim.o.numberwidth = 4
+
+local augroup = vim.api.nvim_create_augroup("stc_cache", { clear = true })
+
+vim.api.nvim_create_autocmd("WinClosed", {
+    group = augroup,
+    callback = function (event)
+        stc.clear(event.match)
+    end,
+})
+
+vim.api.nvim_create_autocmd("WinResized", {
+    group = augroup,
+    callback = function ()
+        stc.init_cache()
+    end,
+})
+
+vim.api.nvim_create_autocmd("OptionSet", {
+    group = augroup,
+    pattern = { "number", "relativenumber", "numberwidth", "foldcolumn", "signcolumn" },
+    callback = function (event)
+        if event.scope == "global" then
+            stc.init_cache()
+        else
+            stc.refresh(vim.api.nvim_get_current_win())
+        end
+    end,
+})

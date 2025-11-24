@@ -1,6 +1,5 @@
 local utils       = require("utils")
 local devicons    = require("nvim-web-devicons")
-local profiler    = require("profiler")
 
 local M           = {}
 
@@ -269,14 +268,6 @@ M.filetype = {
     text = function () return vim.bo.filetype ~= "" and vim.bo.filetype or "none" end,
 }
 
-M.profiler = {
-    name = "profiler",
-    hl   = "@error",
-    text = function ()
-        return profiler.enabled and "[Profiling]" or ""
-    end,
-}
-
 M.left = {
     hl        = "StlSectionB",
     before    = " ",
@@ -301,7 +292,7 @@ M.right = {
     before    = " ",
     after     = " ",
     child_sep = " ",
-    children  = { M.profiler, M.filetype, M.encoding },
+    children  = { M.filetype, M.encoding },
 }
 
 M.whole = {

@@ -133,19 +133,19 @@
         "type": "github"
       }
     },
-    "plugins-resession-telescope-nvim": {
+    "plugins-pick-resession-nvim": {
       "flake": false,
       "locked": {
         "lastModified": 1755917906,
         "narHash": "sha256-q6HHHn1PP/NXg9yk00IUJiThNcgvqlSq4xUbAfeojok=",
         "owner": "scottmckendry",
-        "repo": "telescope-resession.nvim",
+        "repo": "pick-resession.nvim",
         "rev": "3bd9b6a7765be068d2bd88ba77c2602229c97442",
         "type": "github"
       },
       "original": {
         "owner": "scottmckendry",
-        "repo": "telescope-resession.nvim",
+        "repo": "pick-resession.nvim",
         "type": "github"
       }
     },
@@ -155,7 +155,7 @@
         "nil-ls": "nil-ls",
         "nixCats": "nixCats",
         "nixpkgs": "nixpkgs",
-        "plugins-resession-telescope-nvim": "plugins-resession-telescope-nvim",
+        "plugins-pick-resession-nvim": "plugins-pick-resession-nvim",
         "rust-overlay": "rust-overlay"
       }
     },

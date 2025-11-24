@@ -11,6 +11,7 @@ opt.swapfile = false
 opt.breakindent = true
 opt.timeoutlen = 100
 opt.autowrite = true
+opt.autoread = true
 opt.clipboard = "unnamedplus"
 opt.completeopt = "menu,menuone,noselect,preview"
 opt.conceallevel = 3
@@ -59,7 +60,7 @@ opt.foldlevel = 99
 opt.foldlevelstart = 99
 opt.foldenable = true
 
-vim.g.winborder = table.concat(require("constants").wins.border, "")
+vim.o.winborder = table.concat(require("constants").wins.border, ",")
 
 if vim.fn.has("nvim-0.9.0") == 1 then
     opt.splitkeep = "screen"
