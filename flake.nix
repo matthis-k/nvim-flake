@@ -160,7 +160,8 @@
                 hosts.perl.enable = true;
                 configDirName = "nixovim";
                 unwrappedCfgPath = "/home/matthisk/nvim-flake";
-                neovim-unwrapped = inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
+                neovim-unwrapped =
+                  inputs.neovim-nightly-overlay.packages.${pkgs.stdenv.hostPlatform.system}.default;
                 nvimSRC = null;
                 suffix-path = false;
                 suffix-LD = false;
