@@ -37,11 +37,7 @@ local function configure_snacks(Snacks)
     end
 
     local function restore_last_session()
-        local ok_resession, resession = pcall(require, "resession")
-        if not ok_resession then
-            vim.notify("resession.nvim is not available", vim.log.levels.WARN, { title = "Dashboard" })
-            return
-        end
+        local resession = require("resession")
         resession.load(vim.fn.getcwd(), { silence_errors = true })
     end
 
@@ -152,7 +148,6 @@ local function configure_snacks(Snacks)
                     return vim.o.columns >= 120 and "default" or "vertical"
                 end,
             },
-            layouts = picker_layouts,
             win = {
                 input = {
                     border = border,
