@@ -29,5 +29,7 @@ function StatusLine()
     return result
 end
 
-vim.o.statusline = "%!v:lua.StatusLine()"
+_G.Ui = _G.Ui or {}
+_G.Ui.StatusLine = StatusLine
+vim.o.statusline = "%!v:lua.Ui.StatusLine()"
 vim.o.laststatus = 3

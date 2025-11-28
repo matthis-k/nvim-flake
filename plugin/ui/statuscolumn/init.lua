@@ -29,7 +29,9 @@ function StatusColumn()
     return result
 end
 
-vim.o.statuscolumn = "%!v:lua.StatusColumn()"
+_G.Ui = _G.Ui or {}
+_G.Ui.StatusColumn = StatusColumn
+vim.o.statuscolumn = "%!v:lua.Ui.StatusColumn()"
 vim.o.numberwidth = 4
 
 local augroup = vim.api.nvim_create_augroup("stc_cache", { clear = true })

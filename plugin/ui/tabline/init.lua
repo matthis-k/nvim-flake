@@ -35,5 +35,7 @@ vim.api.nvim_create_autocmd({ "ModeChanged", "DiagnosticChanged" }, {
 })
 
 
-vim.o.tabline = "%!v:lua.TabLine()"
+_G.Ui = _G.Ui or {}
+_G.Ui.TabLine = TabLine
+vim.o.tabline = "%!v:lua.Ui.TabLine()"
 vim.o.showtabline = 2
