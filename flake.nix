@@ -55,7 +55,7 @@
               ];
               md = with pkgs; [ marksman ];
               nix = with pkgs; [
-                nixfmt-rfc-style
+                nixfmt
                 nil
               ];
               qml = with pkgs; [ kdePackages.qtdeclarative ];
