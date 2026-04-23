@@ -64,7 +64,7 @@
                 (rust-bin.stable.latest.default.override { extensions = [ "rust-src" ]; })
               ];
               toml = with pkgs; [ taplo ];
-              ts = with pkgs; [ nodePackages_latest.typescript-language-server ];
+              ts = with pkgs; [ typescript-language-server ];
               xml = with pkgs; [ lemminx ];
               opencode = with pkgs; [ opencode ];
             };
@@ -228,7 +228,7 @@
             name = defaultPackageName;
             packages = [ defaultPackage ];
             inputsFrom = [ ];
-            shellHook = '''';
+            shellHook = "";
           };
         };
       }
